@@ -1,0 +1,226 @@
+{% extends "layout.html" %}
+
+{% block title %}Results - Capsico Inference{% endblock %}
+{% block nav_predict %}active{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="text-center mb-4">Drug Treatment Inference Results</h2>
+
+    <!-- Treatment Effect Chart Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h3 class="card-title mb-2">Treatment Effect Chart</h3>
+            <p class="text-muted mb-3" style="font-size:0.88rem;">
+                Each drug shows its Tau point estimate (dot) and a line extending to CI&nbsp;High.
+                The dashed line marks&nbsp;zero&nbsp;&mdash; values below zero indicate a potentially beneficial effect.
+            </p>
+            <div style="position:relative; height:370px;">
+                <canvas id="treatmentChart"></canvas>
+            </div>
+            <!-- Colour legend -->
+            <div class="d-flex flex-wrap justify-content-center mt-3" style="gap:18px; font-size:0.82rem; color:#555;">
+                <span>
+                    <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#27ae60;margin-right:4px;vertical-align:middle;"></span>
+                    Tau &lt;&nbsp;0 &amp; CI High &lt;&nbsp;0
+                </span>
+                <span>
+                    <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#82c882;margin-right:4px;vertical-align:middle;"></span>
+                    Tau &lt;&nbsp;0 &amp; CI High &ge;&nbsp;0
+                </span>
+                <span>
+                    <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#e74c3c;margin-right:4px;vertical-align:middle;"></span>
+                    Tau &ge;&nbsp;0 &amp; CI High &lt;&nbsp;0
+                </span>
+                <span>
+                    <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#b0b0b0;margin-right:4px;vertical-align:middle;"></span>
+                    Tau &ge;&nbsp;0 &amp; CI High &ge;&nbsp;0
+                </span>
+            </div>
+            <p class="text-center text-muted mt-2 mb-0" style="font-size:0.8rem;">
+                &#9733; Best drug (lowest Tau) is highlighted with a larger dot and bold outline.
+            </p>
+        </div>
+    </div>
+
+    <!-- Results Table Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h3 class="card-title mb-4">Treatment Recommendations</h3>
+            
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th scope="col">Drug</th>
+                            <th scope="col">Tau Point Estimate</th>
+                            <th scope="col">CI Low (one-sided 90%)</th>
+                            <th scope="col">CI High (one-sided 90%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in data %}
+                        <tr>
+                            <td><strong>{{ row.Drug }}</strong></td>
+                            <td>{{ "%.4f"|format(row.Tau_Point) if row.Tau_Point is not none else "—" }}</td>
+                            <td>{{ "%.4f"|format(row.CI_Low) if row.CI_Low is not none else "−∞" }}</td>
+                            <td>{{ "%.4f"|format(row.CI_High) if row.CI_High is not none else "+∞" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interpretation Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h4 class="card-title">Understanding the Results</h4>
+            <p style="font-size: 1.05rem; line-height: 1.6;">
+                <strong>Tau Point:</strong> The estimated treatment effect for each drug. A more negative value indicates a stronger potential benefit.<br>
+                <strong>CI High (one-sided 90%):</strong> The upper bound of the one-sided 90% confidence interval. If CI High is below zero, the treatment effect is statistically significant in the beneficial direction.<br>
+                <strong>CI Low:</strong> Not applicable for one-sided tests — displayed as −∞ where the lower bound is unbounded.
+            </p>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="text-center">
+        <a href="/" class="btn btn-primary btn-lg mr-3">
+            <i class="fas fa-home"></i> Back to Home
+        </a>
+        <a href="/predict" class="btn btn-danger btn-lg">
+            <i class="fas fa-redo"></i> Run New Inference
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+(function () {
+    /* ── raw data from Jinja ── */
+    const chartData = [
+        {% for row in data %}
+        {
+            drug:    {{ row.Drug | tojson }},
+            tau:     {{ row.Tau_Point if row.Tau_Point is not none else 'null' }},
+            ciHigh:  {{ row.CI_High  if row.CI_High  is not none else 'null' }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const valid = chartData.filter(d => d.tau !== null && d.ciHigh !== null);
+    if (!valid.length) return;
+
+    /* ── colour logic mirrors biostat report ── */
+    function getColor(tau, ciHigh) {
+        if (tau < 0 && ciHigh < 0)  return '#27ae60';  /* green       */
+        if (tau < 0 && ciHigh >= 0) return '#82c882';  /* light green */
+        if (tau >= 0 && ciHigh < 0) return '#e74c3c';  /* red         */
+        return '#b0b0b0';                               /* light gray  */
+    }
+
+    /* ── best drug = lowest Tau_Point ── */
+    const bestIdx = valid.reduce((mi, d, i, a) => d.tau < a[mi].tau ? i : mi, 0);
+
+    const labels    = valid.map(d => d.drug);
+    const colors    = valid.map(d => getColor(d.tau, d.ciHigh));
+
+    /* floating bar: [bottom, top] – renders as a thin vertical line */
+    const floatBars = valid.map(d => [Math.min(d.tau, d.ciHigh), Math.max(d.tau, d.ciHigh)]);
+
+    /* scatter points – x must match category labels */
+    const scatterPts   = valid.map(d => ({ x: d.drug, y: d.tau }));
+    const pointRadii   = valid.map((_, i) => i === bestIdx ? 9 : 5);
+    const pointBWidths = valid.map((_, i) => i === bestIdx ? 2.5 : 1);
+    const pointBColors = valid.map((_, i) => i === bestIdx ? '#111' : '#666');
+
+    /* ── inline plugin: dashed reference line at y = 0 ── */
+    const zeroLinePlugin = {
+        id: 'zeroLine',
+        afterDraw(chart) {
+            const { ctx, scales: { x, y } } = chart;
+            const yPx = y.getPixelForValue(0);
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(x.left,  yPx);
+            ctx.lineTo(x.right, yPx);
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth   = 1.5;
+            ctx.setLineDash([7, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
+    };
+
+    /* ── chart ── */
+    const ctx = document.getElementById('treatmentChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        plugins: [zeroLinePlugin],
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    /* thin bar = vertical line from Tau to CI High */
+                    label: 'Tau → CI High',
+                    data:            floatBars,
+                    backgroundColor: colors.map(c => c + 'bb'),
+                    borderColor:     colors,
+                    borderWidth:     1,
+                    barThickness:    3,
+                    order:           2
+                },
+                {
+                    /* dot at Tau Point */
+                    label:          'Tau Point',
+                    type:           'scatter',
+                    data:           scatterPts,
+                    backgroundColor: colors,
+                    borderColor:    pointBColors,
+                    borderWidth:    pointBWidths,
+                    pointRadius:    pointRadii,
+                    pointHoverRadius: pointRadii.map(r => r + 2),
+                    order:          1
+                }
+            ]
+        },
+        options: {
+            responsive:          true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: { display: true, text: 'Drug' },
+                    ticks: { maxRotation: 45, minRotation: 30, font: { size: 12 } }
+                },
+                y: {
+                    title: { display: true, text: 'Treatment Effect (Tau)' }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    /* show tooltip only for the scatter dot layer */
+                    filter: item => item.datasetIndex === 1,
+                    callbacks: {
+                        title: items => items[0]?.label || '',
+                        label: item => {
+                            const d    = valid[item.dataIndex];
+                            const best = item.dataIndex === bestIdx ? '  ★ Best drug' : '';
+                            return [
+                                'Tau: '     + d.tau.toFixed(4)    + best,
+                                'CI High: ' + d.ciHigh.toFixed(4)
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,218 @@
+/* General Styling for the Body */
+html, body {
+    background-color: #F5F5F5; /* Light Gray for a modern feel */
+    color: #1E1E1E; /* Dark Gray for readability */
+    overscroll-behavior: none;
+}
+
+.container-fluid {
+    padding-top: 0 !important;
+}
+
+/* Heading Styles */
+h2 {
+    color: #007380; /* Darker Teal for contrast */
+    font-size: 2rem;
+    font-weight: bold;
+    border-bottom: 3px solid #0090A5; /* Primary teal accent */
+    padding-bottom: 5px;
+    margin-bottom: 15px;
+}
+
+h3 {
+    color: #E73C0D; /* Accent color for emphasis */
+    font-size: 1.75rem;
+    font-weight: semi-bold;
+    margin-bottom: 12px;
+}
+
+h4 {
+    color: #1A1A1A; /* Dark gray for readability */
+    font-size: 1.5rem;
+    font-weight: normal;
+    margin-bottom: 10px;
+}
+
+/* Sidebar */
+nav {
+    height: 100vh;
+    top: 0;
+    left: 0;
+    padding-top: 50px;
+    position: fixed;
+    background-color: #005266;
+    overflow-y: auto;
+}
+
+#sidebar img {
+    display: block;
+    margin: 5px auto;
+    width: 100%;
+    max-width: 150px;
+    height: auto;
+}
+
+/* Sidebar items */
+.nav-link {
+    padding: 12px 15px;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: normal;
+}
+
+/* Hover effect for links */
+.nav-link:hover {
+    color: #E73C0D;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Active link */
+.nav-link.active {
+    background-color: #E73C0D;
+    color: white;
+}
+
+/* Sidebar icon sizes */
+.nav-link i {
+    font-size: 1.5rem;
+    margin-right: 10px;
+}
+
+/* Change text color of tabs when not hovered */
+.nav-tabs .nav-link {
+    color: black;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #E73C0D;
+    background-color: transparent;
+    text-decoration: none;
+}
+
+/* Active tab styling */
+.nav-tabs .nav-link.active {
+    color: #E73C0D;
+    background-color: transparent;
+    border: none;
+}
+
+/* Main Content */
+main {
+    margin-left: 250px;
+    padding: 20px;
+    background-color: #F4F8F9;
+    border-radius: 8px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+}
+
+/* Navbar */
+.navbar {
+    background-color: #0090A5; /* Teal Blue */
+    border-bottom: 3px solid #E73C0D; /* Red-Orange accent */
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+    padding-left: 20px;
+}
+
+/* Navbar link styling */
+.navbar .nav-link {
+    font-size: 1.3rem;
+    font-weight: normal;
+    color: white;
+}
+
+/* Navbar hover */
+.navbar .nav-link:hover {
+    color: #E73C0D;
+}
+
+.prediction {
+    color: #E73C0D;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: #0090A5;
+    border-color: #00798A;
+    color: white;
+}
+.btn-primary:hover {
+    background-color: #00798A;
+    border-color: #005F6D;
+}
+
+.btn-danger {
+    background-color: #E73C0D;
+    border-color: #D62B00;
+    color: white;
+}
+.btn-danger:hover {
+    background-color: #D62B00;
+}
+
+/* Input Fields */
+input[type="number"] {
+    appearance: none;
+    -moz-appearance: textfield;
+}
+
+/* Forms */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+/* Prediction Result Styling */
+/* .alert {
+    font-size: 1.25rem;
+    font-weight: bold;
+    text-align: center;
+    background-color: #E73C0D;
+    color: white;
+    border-radius: 5px;
+} */
+
+/* Centering the close button */
+.alert {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+
+
+/* Buttons */
+.btn {
+    padding: 0.75rem 1.25rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    #sidebar {
+        position: relative;
+        height: auto;
+        padding-top: 20px;
+    }
+
+    main {
+        margin-left: 0;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .container-fluid {
+        padding-top: 20px;
+    }
+
+    .navbar {
+        padding-left: 30px;
+    }
+}

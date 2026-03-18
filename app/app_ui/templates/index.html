@@ -1,0 +1,242 @@
+{% extends "layout.html" %}
+
+{% block title %}Home - Capsico Inference{% endblock %}
+{% block nav_home %}active{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="text-center mb-4">Capsico Drug Treatment Inference</h2>
+
+    <!-- CSV Upload (prefill only — does NOT run inference) -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Load Patient from CSV</h5>
+            <form action="/upload-patient-csv" method="POST" enctype="multipart/form-data">
+                <div class="form-row align-items-end">
+                    <div class="form-group col-md-8 mb-0">
+                        <input type="file" class="form-control-file" name="csv_file" accept=".csv" required>
+                        <small class="form-text text-muted">
+                            Upload a single-patient CSV to prefill the form below. You can review and edit values before running inference.
+                        </small>
+                    </div>
+                    <div class="form-group col-md-4 mb-0">
+                        <button type="submit" class="btn btn-outline-secondary btn-block">
+                            <i class="fas fa-file-csv"></i> Upload CSV to Prefill Form
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if upload_filename %}
+    <div class="alert alert-info" role="alert">
+        <i class="fas fa-check-circle"></i>
+        <strong>Patient data loaded from CSV: {{ upload_filename }}.</strong>
+        Review and edit the values below before running inference.
+    </div>
+    {% endif %}
+
+    {% if form_errors %}
+    <div class="alert alert-danger" role="alert">
+        <h6 class="alert-heading mb-2"><i class="fas fa-exclamation-triangle"></i> Please fix the following errors before running inference:</h6>
+        <ul class="mb-0">
+            {% for field, message in form_errors.items() %}
+            <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Patient Input Form (submits to /predict) -->
+    <form action="/predict" method="POST">
+
+        <!-- Patient Information -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Patient Information</h5>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="patientid">Patient ID</label>
+                        <input type="text" class="form-control" id="patientid" name="patientid"
+                               value="{{ prefill_data.get('patientid', '') if prefill_data else '' }}"
+                               placeholder="e.g. PAT001">
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="age">Age</label>
+                        <input type="number" class="form-control" id="age" name="age" min="18" max="110"
+                               value="{{ prefill_data.get('age', '') if prefill_data else '' }}"
+                               placeholder="e.g. 65">
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="sex">Sex</label>
+                        <select class="form-control" id="sex" name="sex">
+                            {% set sex_val = prefill_data.get('sex', '') | string if prefill_data else '' %}
+                            <option value="" {{ 'selected' if sex_val == '' }}>— use default —</option>
+                            <option value="0" {{ 'selected' if sex_val == '0' or sex_val == '0.0' }}>Female</option>
+                            <option value="1" {{ 'selected' if sex_val == '1' or sex_val == '1.0' }}>Male</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clinical Measurements -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Clinical Measurements</h5>
+                <div class="form-row">
+                    <div class="form-group col-md-3">
+                        <label for="baseline_bmi">BMI (kg/m²)</label>
+                        <input type="number" class="form-control" id="baseline_bmi" name="baseline_bmi" step="0.1" min="10" max="60"
+                               value="{{ prefill_data.get('baseline_bmi', '') if prefill_data else '' }}"
+                               placeholder="e.g. 26.5">
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label for="baseline_sbp">Systolic BP (mmHg)</label>
+                        <input type="number" class="form-control" id="baseline_sbp" name="baseline_sbp" min="60" max="250"
+                               value="{{ prefill_data.get('baseline_sbp', '') if prefill_data else '' }}"
+                               placeholder="e.g. 120">
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label for="baseline_hr">Heart Rate (bpm)</label>
+                        <input type="number" class="form-control" id="baseline_hr" name="baseline_hr" min="30" max="200"
+                               value="{{ prefill_data.get('baseline_hr', '') if prefill_data else '' }}"
+                               placeholder="e.g. 72">
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label for="baseline_k">Potassium (mmol/L)</label>
+                        <input type="number" class="form-control" id="baseline_k" name="baseline_k" step="0.1" min="2.0" max="7.0"
+                               value="{{ prefill_data.get('baseline_k', '') if prefill_data else '' }}"
+                               placeholder="e.g. 4.5">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="lvef">LVEF (%)</label>
+                        <input type="number" class="form-control" id="lvef" name="lvef" min="5" max="80"
+                               value="{{ prefill_data.get('lvef', '') if prefill_data else '' }}"
+                               placeholder="e.g. 35">
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="baseline_nyha">NYHA Class</label>
+                        <select class="form-control" id="baseline_nyha" name="baseline_nyha">
+                            {% set nyha_val = prefill_data.get('baseline_nyha', '') | string if prefill_data else '' %}
+                            <option value="" {{ 'selected' if nyha_val == '' }}>— use default —</option>
+                            <option value="1" {{ 'selected' if nyha_val == '1' or nyha_val == '1.0' }}>I</option>
+                            <option value="2" {{ 'selected' if nyha_val == '2' or nyha_val == '2.0' }}>II</option>
+                            <option value="3" {{ 'selected' if nyha_val == '3' or nyha_val == '3.0' }}>III</option>
+                            <option value="4" {{ 'selected' if nyha_val == '4' or nyha_val == '4.0' }}>IV</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Medical History -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Medical History</h5>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="mh_af">Atrial Fibrillation</label>
+                        <select class="form-control" id="mh_af" name="mh_af">
+                            {% set af_val = prefill_data.get('mh_af', '') | string if prefill_data else '' %}
+                            <option value="" {{ 'selected' if af_val == '' }}>— use default —</option>
+                            <option value="0" {{ 'selected' if af_val == '0' or af_val == '0.0' }}>No</option>
+                            <option value="1" {{ 'selected' if af_val == '1' or af_val == '1.0' }}>Yes</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="mh_ckd">Chronic Kidney Disease</label>
+                        <select class="form-control" id="mh_ckd" name="mh_ckd">
+                            {% set ckd_val = prefill_data.get('mh_ckd', '') | string if prefill_data else '' %}
+                            <option value="" {{ 'selected' if ckd_val == '' }}>— use default —</option>
+                            <option value="0" {{ 'selected' if ckd_val == '0' or ckd_val == '0.0' }}>No</option>
+                            <option value="1" {{ 'selected' if ckd_val == '1' or ckd_val == '1.0' }}>Yes</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="mh_dm">Diabetes Mellitus</label>
+                        <select class="form-control" id="mh_dm" name="mh_dm">
+                            {% set dm_val = prefill_data.get('mh_dm', '') | string if prefill_data else '' %}
+                            <option value="" {{ 'selected' if dm_val == '' }}>— use default —</option>
+                            <option value="0" {{ 'selected' if dm_val == '0' or dm_val == '0.0' }}>No</option>
+                            <option value="1" {{ 'selected' if dm_val == '1' or dm_val == '1.0' }}>Yes</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Medication Doses -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Medication Doses</h5>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="bb_dose">Beta-Blocker Dose (mg)</label>
+                        <input type="number" class="form-control" id="bb_dose" name="bb_dose" step="0.5" min="0"
+                               value="{{ prefill_data.get('bb_dose', '') if prefill_data else '' }}"
+                               placeholder="e.g. 5">
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="arni_dose">ARNI Dose (mg)</label>
+                        <input type="number" class="form-control" id="arni_dose" name="arni_dose" step="1" min="0"
+                               value="{{ prefill_data.get('arni_dose', '') if prefill_data else '' }}"
+                               placeholder="e.g. 100">
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="sglt_dose">SGLT2i Dose (mg)</label>
+                        <input type="number" class="form-control" id="sglt_dose" name="sglt_dose" step="1" min="0"
+                               value="{{ prefill_data.get('sglt_dose', '') if prefill_data else '' }}"
+                               placeholder="e.g. 10">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="mra_dose">MRA Dose (mg)</label>
+                        <input type="number" class="form-control" id="mra_dose" name="mra_dose" step="0.5" min="0"
+                               value="{{ prefill_data.get('mra_dose', '') if prefill_data else '' }}"
+                               placeholder="e.g. 12.5">
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="loopd_dose">Loop Diuretic Dose (mg)</label>
+                        <input type="number" class="form-control" id="loopd_dose" name="loopd_dose" step="0.5" min="0"
+                               value="{{ prefill_data.get('loopd_dose', '') if prefill_data else '' }}"
+                               placeholder="e.g. 40">
+                    </div>
+                </div>
+                <small class="form-text text-muted">
+                    Leave any field empty to use the baseline default value.
+                </small>
+            </div>
+        </div>
+
+        
+
+        <div class="text-center mt-2 mb-5">
+            <button type="submit" id="runInferenceBtn" class="btn btn-primary btn-lg">
+                <span id="btnDefault"><i class="fas fa-play-circle"></i> Run Inference</span>
+                <span id="btnLoading" style="display:none;">
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    Running inference…
+                </span>
+            </button>
+        </div>
+
+    </form>
+</div>
+
+<script>
+document.getElementById('runInferenceBtn').closest('form').addEventListener('submit', function () {
+    var btn = document.getElementById('runInferenceBtn');
+    var defaultLabel = document.getElementById('btnDefault');
+    var loadingLabel = document.getElementById('btnLoading');
+    defaultLabel.style.display = 'none';
+    loadingLabel.style.display = 'inline';
+    btn.disabled = true;
+});
+</script>
+
+{% endblock %}

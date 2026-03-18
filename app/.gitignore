@@ -1,0 +1,84 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Outputs (keep directory, ignore contents)
+outputs/*.csv
+outputs/*.json
+!outputs/.gitkeep
+
+# Inputs (uploaded files)
+inputs/*.csv
+inputs/*.json
+!inputs/.gitkeep
+
+# R
+.Rhistory
+.RData
+.Rproj.user
+
+# Flask
+instance/
+.webassets-cache
+
+# Test coverage
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
