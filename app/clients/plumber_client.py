@@ -4,11 +4,8 @@ It sends patient data as a flat JSON payload to the running Plumber API and
 returns the inference results as a Python list.
 """
 
-import os
 import requests
-
-# Configuration - Use environment variable with fallback to default
-PLUMBER_PREDICT_URL = os.getenv("PLUMBER_API_URL", "http://localhost:8000") + "/predict"
+from config import PLUMBER_PREDICT_URL
 
 
 def call_plumber_predict(payload: dict) -> list:

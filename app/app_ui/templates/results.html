@@ -1,99 +1,427 @@
 {% extends "layout.html" %}
 
-{% block title %}Results - Capsico Inference{% endblock %}
+{% block title %}Treatment Decision - Capsico{% endblock %}
 {% block nav_predict %}active{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <h2 class="text-center mb-4">Drug Treatment Inference Results</h2>
+<div class="container py-4">
 
-    <!-- Treatment Effect Chart Card -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <h3 class="card-title mb-2">Treatment Effect Chart</h3>
-            <p class="text-muted mb-3" style="font-size:0.88rem;">
-                Each drug shows its Tau point estimate (dot) and a line extending to CI&nbsp;High.
-                The dashed line marks&nbsp;zero&nbsp;&mdash; values below zero indicate a potentially beneficial effect.
-            </p>
-            <div style="position:relative; height:370px;">
-                <canvas id="treatmentChart"></canvas>
+    <!-- ═══════════════════════════════════════════════════════════════════════════
+         LAYER 1: DECISION BANNER (dominates the page)
+         ═══════════════════════════════════════════════════════════════════════════ -->
+    {% if decision_summary %}
+    {% set conf = decision_summary.decision_confidence %}
+    {% set has_recommendation = decision_summary.primary_recommendation %}
+
+    <div class="card mb-4 shadow" style="border: none; border-radius: 12px; overflow: hidden;">
+        <!-- Colored header bar -->
+        <div style="height: 6px; background:
+            {% if conf == 'high' %}#27ae60
+            {% elif conf == 'moderate' %}#f39c12
+            {% elif conf == 'low' %}#e74c3c
+            {% else %}#95a5a6{% endif %};"></div>
+
+        <div class="card-body py-4 px-4">
+            <!-- Main Decision Row -->
+            <div class="row">
+                <!-- Left: The Decision -->
+                <div class="col-lg-7 mb-3 mb-lg-0">
+                    <div class="d-flex align-items-start">
+                        <!-- Drug Name (large) -->
+                        <div class="mr-4">
+                            {% if has_recommendation %}
+                            <div style="font-size: 3rem; font-weight: 800; color: #1a252f; line-height: 1;">
+                                {{ decision_summary.primary_recommendation.Drug }}
+                            </div>
+                            <div class="mt-1">
+                                <span class="badge
+                                    {% if conf == 'high' %}badge-success
+                                    {% elif conf == 'moderate' %}badge-warning text-dark
+                                    {% elif conf == 'low' %}badge-danger
+                                    {% else %}badge-secondary{% endif %}"
+                                    style="font-size: 0.75rem; padding: 4px 10px; font-weight: 600;">
+                                    {{ conf|upper }} CONFIDENCE
+                                </span>
+                            </div>
+                            {% else %}
+                            <div style="font-size: 1.8rem; font-weight: 600; color: #7f8c8d;">
+                                No Clear Recommendation
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Clinical Message -->
+                        <div class="flex-grow-1 pt-1">
+                            <p class="mb-2" style="font-size: 1.1rem; color: #2c3e50; font-weight: 500;">
+                                {{ decision_summary.clinical_message }}
+                            </p>
+                            {% if decision_summary.decision_reason %}
+                            <p class="mb-0" style="font-size: 0.88rem; color: #666;">
+                                <em>{{ decision_summary.decision_reason }}</em>
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Treatment Classification -->
+                <div class="col-lg-5">
+                    <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
+                        Treatment Classification
+                    </div>
+                    <table class="table table-sm mb-0" style="font-size: 0.9rem;">
+                        {% if decision_summary.tier_1_significant %}
+                        <tr>
+                            <td style="width: 20px; padding: 6px 8px; border: none;">
+                                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #27ae60;"></span>
+                            </td>
+                            <td style="padding: 6px 8px; border: none; color: #555;">
+                                <strong>Significant benefit:</strong>
+                                {{ decision_summary.tier_1_significant|map(attribute='Drug')|join(', ') }}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if decision_summary.tier_2_suggestive %}
+                        <tr>
+                            <td style="width: 20px; padding: 6px 8px; border: none;">
+                                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f39c12;"></span>
+                            </td>
+                            <td style="padding: 6px 8px; border: none; color: #555;">
+                                <strong>Suggestive benefit:</strong>
+                                {{ decision_summary.tier_2_suggestive|map(attribute='Drug')|join(', ') }}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if decision_summary.tier_3_no_benefit %}
+                        <tr>
+                            <td style="width: 20px; padding: 6px 8px; border: none;">
+                                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #bdc3c7;"></span>
+                            </td>
+                            <td style="padding: 6px 8px; border: none; color: #555;">
+                                <strong>No supported benefit:</strong>
+                                {{ decision_summary.tier_3_no_benefit|map(attribute='Drug')|join(', ') }}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if decision_summary.tier_unknown %}
+                        <tr>
+                            <td style="width: 20px; padding: 6px 8px; border: none;">
+                                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ecf0f1; border: 1px solid #bdc3c7;"></span>
+                            </td>
+                            <td style="padding: 6px 8px; border: none; color: #888;">
+                                <strong>Insufficient data:</strong>
+                                {{ decision_summary.tier_unknown|map(attribute='Drug')|join(', ') }}
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
             </div>
-            <!-- Colour legend -->
-            <div class="d-flex flex-wrap justify-content-center mt-3" style="gap:18px; font-size:0.82rem; color:#555;">
-                <span>
-                    <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#27ae60;margin-right:4px;vertical-align:middle;"></span>
-                    Tau &lt;&nbsp;0 &amp; CI High &lt;&nbsp;0
-                </span>
-                <span>
-                    <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#82c882;margin-right:4px;vertical-align:middle;"></span>
-                    Tau &lt;&nbsp;0 &amp; CI High &ge;&nbsp;0
-                </span>
-                <span>
-                    <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#e74c3c;margin-right:4px;vertical-align:middle;"></span>
-                    Tau &ge;&nbsp;0 &amp; CI High &lt;&nbsp;0
-                </span>
-                <span>
-                    <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#b0b0b0;margin-right:4px;vertical-align:middle;"></span>
-                    Tau &ge;&nbsp;0 &amp; CI High &ge;&nbsp;0
-                </span>
-            </div>
-            <p class="text-center text-muted mt-2 mb-0" style="font-size:0.8rem;">
-                &#9733; Best drug (lowest Tau) is highlighted with a larger dot and bold outline.
-            </p>
         </div>
     </div>
+    {% endif %}
 
-    <!-- Results Table Card -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <h3 class="card-title mb-4">Treatment Recommendations</h3>
-            
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="thead-dark">
-                        <tr>
-                            <th scope="col">Drug</th>
-                            <th scope="col">Tau Point Estimate</th>
-                            <th scope="col">CI Low (one-sided 90%)</th>
-                            <th scope="col">CI High (one-sided 90%)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in data %}
-                        <tr>
-                            <td><strong>{{ row.Drug }}</strong></td>
-                            <td>{{ "%.4f"|format(row.Tau_Point) if row.Tau_Point is not none else "—" }}</td>
-                            <td>{{ "%.4f"|format(row.CI_Low) if row.CI_Low is not none else "−∞" }}</td>
-                            <td>{{ "%.4f"|format(row.CI_High) if row.CI_High is not none else "+∞" }}</td>
-                        </tr>
+    <!-- ═══════════════════════════════════════════════════════════════════════════
+         LAYER 2 & 3: TABBED CONTENT (Evidence + Explanation)
+         ═══════════════════════════════════════════════════════════════════════════ -->
+    <ul class="nav nav-tabs" id="resultTabs" role="tablist" style="border-bottom: 2px solid #dee2e6;">
+        <li class="nav-item">
+            <a class="nav-link active" id="overview-tab" data-toggle="tab" href="#overview" role="tab"
+               style="font-weight: 500; color: #495057;">
+                Summary
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="comparison-tab" data-toggle="tab" href="#comparison" role="tab"
+               style="font-weight: 500; color: #495057;">
+                Full Evidence
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="explanation-tab" data-toggle="tab" href="#explanation" role="tab"
+               style="font-weight: 500; color: #6c757d;">
+                AI Explanation
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content pt-4" id="resultTabsContent">
+
+        <!-- ═══════════════════════════════════════════════════════════════════════
+             TAB 1: SUMMARY (decision verification, not data dump)
+             ═══════════════════════════════════════════════════════════════════════ -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+
+            <!-- Quick Reference Table -->
+            <div class="card mb-4">
+                <div class="card-header" style="background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
+                    <strong>Treatment Effect Summary</strong>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead style="background: #f8f9fa;">
+                            <tr>
+                                <th style="width: 25%; padding: 12px 16px;">Treatment</th>
+                                <th style="width: 25%; padding: 12px 16px;">Effect Estimate</th>
+                                <th style="width: 25%; padding: 12px 16px;">Confidence Interval</th>
+                                <th style="width: 25%; padding: 12px 16px;">Classification</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in data %}
+                            {% set tau = row.get("Tau_Point") %}
+                            {% set ci_high = row.get("CI_High") %}
+                            {% set is_recommended = decision_summary and decision_summary.primary_recommendation and row.get("Drug") == decision_summary.primary_recommendation.Drug %}
+                            <tr {% if is_recommended %}style="background: #f0fff4;"{% endif %}>
+                                <td style="padding: 12px 16px; vertical-align: middle;">
+                                    <strong style="font-size: 1.05rem;">{{ row.get("Drug", "-") }}</strong>
+                                    {% if is_recommended %}
+                                    <span class="badge badge-success ml-2" style="font-size: 0.7rem;">RECOMMENDED</span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 12px 16px; vertical-align: middle; font-family: monospace;">
+                                    {% if tau is not none %}
+                                    {{ "%.4f"|format(tau) }}
+                                    {% if tau < 0 %}<span style="color: #27ae60; margin-left: 4px;">&#8595;</span>{% endif %}
+                                    {% else %}-{% endif %}
+                                </td>
+                                <td style="padding: 12px 16px; vertical-align: middle; font-family: monospace; color: #666;">
+                                    {% if ci_high is not none %}
+                                    upper bound: {{ "%.4f"|format(ci_high) }}
+                                    {% else %}N/A{% endif %}
+                                </td>
+                                <td style="padding: 12px 16px; vertical-align: middle;">
+                                    {% if tau is none %}
+                                    <span style="color: #95a5a6;">Insufficient data</span>
+                                    {% elif tau < 0 and ci_high is not none and ci_high < 0 %}
+                                    <span style="color: #27ae60; font-weight: 600;">
+                                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #27ae60; margin-right: 6px;"></span>
+                                        Significant benefit
+                                    </span>
+                                    {% elif tau < 0 %}
+                                    <span style="color: #f39c12; font-weight: 500;">
+                                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f39c12; margin-right: 6px;"></span>
+                                        Suggestive benefit
+                                    </span>
+                                    {% else %}
+                                    <span style="color: #95a5a6;">
+                                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #bdc3c7; margin-right: 6px;"></span>
+                                        No supported benefit
+                                    </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Interpretation Key -->
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="alert" style="background: #f8f9fa; border: 1px solid #e9ecef; color: #495057;">
+                        <strong style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">How to interpret</strong>
+                        <ul class="mb-0 mt-2" style="font-size: 0.9rem; padding-left: 20px;">
+                            <li><strong>Effect Estimate (Tau):</strong> Negative values indicate benefit. More negative = stronger effect.</li>
+                            <li><strong>CI upper bound &lt; 0:</strong> Effect is statistically significant at 90% confidence.</li>
+                            <li><strong>CI upper bound &ge; 0:</strong> Effect is suggestive but not conclusive.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center py-3">
+                        <a href="#comparison" onclick="$('#comparison-tab').tab('show'); return false;"
+                           class="btn btn-outline-secondary">
+                            View Full Chart &amp; Data &rarr;
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════════
+             TAB 2: FULL EVIDENCE (chart + detailed table)
+             ═══════════════════════════════════════════════════════════════════════ -->
+        <div class="tab-pane fade" id="comparison" role="tabpanel">
+
+            <!-- Treatment Effect Chart -->
+            <div class="card mb-4">
+                <div class="card-header" style="background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
+                    <strong>Treatment Effect Visualization</strong>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3" style="font-size: 0.88rem;">
+                        Each point shows the treatment effect estimate (Tau). The line extends to the confidence interval upper bound.
+                        Values below zero indicate beneficial effect.
+                    </p>
+                    <div style="position: relative; height: 320px;">
+                        <canvas id="treatmentChart"></canvas>
+                    </div>
+                    <!-- Legend -->
+                    <div class="d-flex justify-content-center mt-3" style="gap: 24px; font-size: 0.85rem; color: #666;">
+                        <span>
+                            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #27ae60; margin-right: 6px; vertical-align: middle;"></span>
+                            Significant benefit
+                        </span>
+                        <span>
+                            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #f39c12; margin-right: 6px; vertical-align: middle;"></span>
+                            Suggestive benefit
+                        </span>
+                        <span>
+                            <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #b0b0b0; margin-right: 6px; vertical-align: middle;"></span>
+                            No supported benefit
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Data Table -->
+            <div class="card mb-4">
+                <div class="card-header" style="background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
+                    <strong>Detailed Treatment Data</strong>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead style="background: #343a40; color: white;">
+                                <tr>
+                                    <th style="padding: 14px 16px;">Treatment</th>
+                                    <th style="padding: 14px 16px;">Tau (Effect)</th>
+                                    <th style="padding: 14px 16px;">CI Lower</th>
+                                    <th style="padding: 14px 16px;">CI Upper</th>
+                                    <th style="padding: 14px 16px;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in data %}
+                                {% set tau = row.get("Tau_Point") %}
+                                {% set ci_high = row.get("CI_High") %}
+                                {% set is_recommended = decision_summary and decision_summary.primary_recommendation and row.get("Drug") == decision_summary.primary_recommendation.Drug %}
+                                <tr {% if is_recommended %}style="background: #f0fff4;"{% endif %}>
+                                    <td style="padding: 14px 16px;">
+                                        <strong>{{ row.get("Drug", "-") }}</strong>
+                                        {% if is_recommended %}
+                                        <span class="badge badge-success ml-2">Recommended</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 14px 16px; font-family: monospace;">
+                                        {{ "%.4f"|format(tau) if tau is not none else "-" }}
+                                    </td>
+                                    <td style="padding: 14px 16px; font-family: monospace; color: #888;">
+                                        {{ "%.4f"|format(row.get("CI_Low")) if row.get("CI_Low") is not none else "-inf" }}
+                                    </td>
+                                    <td style="padding: 14px 16px; font-family: monospace;">
+                                        {{ "%.4f"|format(ci_high) if ci_high is not none else "N/A" }}
+                                    </td>
+                                    <td style="padding: 14px 16px;">
+                                        {% if tau is none %}
+                                        <span class="badge badge-secondary">Insufficient Data</span>
+                                        {% elif tau < 0 and ci_high is not none and ci_high < 0 %}
+                                        <span class="badge badge-success">Significant Benefit</span>
+                                        {% elif tau < 0 %}
+                                        <span class="badge badge-warning text-dark">Suggestive Benefit</span>
+                                        {% else %}
+                                        <span class="badge" style="background: #e9ecef; color: #495057;">No Supported Benefit</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistical Notes -->
+            <div class="card" style="background: #f8f9fa; border: 1px solid #e9ecef;">
+                <div class="card-body py-3">
+                    <h6 class="mb-2" style="color: #495057;">Statistical Notes</h6>
+                    <div class="row" style="font-size: 0.88rem; color: #666;">
+                        <div class="col-md-4">
+                            <strong>Tau (Treatment Effect):</strong><br>
+                            Estimated individual treatment effect. Negative = beneficial.
+                        </div>
+                        <div class="col-md-4">
+                            <strong>CI Upper Bound:</strong><br>
+                            One-sided 90% confidence interval. If &lt; 0, effect is statistically significant.
+                        </div>
+                        <div class="col-md-4">
+                            <strong>CI Lower Bound:</strong><br>
+                            Unbounded for one-sided tests (shown as -inf).
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════════
+             TAB 3: AI EXPLANATION (supplementary)
+             ═══════════════════════════════════════════════════════════════════════ -->
+        <div class="tab-pane fade" id="explanation" role="tabpanel">
+            {% if alex_guidance %}
+            <div class="card">
+                <div class="card-header" style="background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
+                    <strong>AI-Generated Explanation</strong>
+                    <span class="text-muted ml-2" style="font-size: 0.85rem;">(supplementary)</span>
+                </div>
+                <div class="card-body">
+                    {% if alex_guidance.ok and alex_guidance.answer %}
+
+                    <div style="background: #f8fbff; border-left: 4px solid #4a90d9; padding: 16px 20px; margin-bottom: 16px;">
+                        <p style="font-size: 1rem; line-height: 1.75; margin-bottom: 0; color: #2c3e50;">
+                            {{ alex_guidance.answer }}
+                        </p>
+                    </div>
+
+                    {% if alex_guidance.warnings and alex_guidance.warnings|length > 0 %}
+                    <div class="alert alert-warning py-2" style="font-size: 0.88rem;">
+                        <strong>Notes:</strong>
+                        {% for warning in alex_guidance.warnings %}
+                        {{ warning }}{% if not loop.last %} | {% endif %}
                         {% endfor %}
-                    </tbody>
-                </table>
+                    </div>
+                    {% endif %}
+
+                    <p class="text-muted mb-0" style="font-size: 0.8rem;">
+                        This explanation is generated from the treatment effect data shown in the Evidence tab.
+                        It does not replace clinical judgment.
+                        {% if alex_guidance.model %}<br>Model: {{ alex_guidance.model }}{% endif %}
+                        {% if alex_guidance.request_id %} | Request: {{ alex_guidance.request_id }}{% endif %}
+                    </p>
+
+                    {% else %}
+                    <div class="alert alert-secondary mb-0">
+                        <strong>AI explanation unavailable</strong>
+                        <p class="mb-0 mt-1" style="font-size: 0.92rem;">
+                            The treatment recommendation above is based on the statistical analysis.
+                            The AI explanation service is temporarily unavailable.
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
+            {% else %}
+            <div class="alert alert-light" style="border: 1px solid #dee2e6;">
+                AI explanation is not available for this analysis.
+            </div>
+            {% endif %}
         </div>
+
     </div>
 
-    <!-- Interpretation Card -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <h4 class="card-title">Understanding the Results</h4>
-            <p style="font-size: 1.05rem; line-height: 1.6;">
-                <strong>Tau Point:</strong> The estimated treatment effect for each drug. A more negative value indicates a stronger potential benefit.<br>
-                <strong>CI High (one-sided 90%):</strong> The upper bound of the one-sided 90% confidence interval. If CI High is below zero, the treatment effect is statistically significant in the beneficial direction.<br>
-                <strong>CI Low:</strong> Not applicable for one-sided tests — displayed as −∞ where the lower bound is unbounded.
-            </p>
-        </div>
+    <!-- ═══════════════════════════════════════════════════════════════════════════
+         ACTIONS
+         ═══════════════════════════════════════════════════════════════════════════ -->
+    <div class="d-flex justify-content-center mt-4 pt-2" style="gap: 12px;">
+        <a href="/" class="btn btn-primary px-4">
+            <i class="fas fa-home mr-1"></i> Home
+        </a>
+        <a href="/predict" class="btn btn-outline-secondary px-4">
+            <i class="fas fa-redo mr-1"></i> New Analysis
+        </a>
     </div>
 
-    <!-- Action Buttons -->
-    <div class="text-center">
-        <a href="/" class="btn btn-primary btn-lg mr-3">
-            <i class="fas fa-home"></i> Back to Home
-        </a>
-        <a href="/predict" class="btn btn-danger btn-lg">
-            <i class="fas fa-redo"></i> Run New Inference
-        </a>
-    </div>
 </div>
 {% endblock %}
 
@@ -101,44 +429,39 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
 (function () {
-    /* ── raw data from Jinja ── */
-    const chartData = [
-        {% for row in data %}
-        {
-            drug:    {{ row.Drug | tojson }},
-            tau:     {{ row.Tau_Point if row.Tau_Point is not none else 'null' }},
-            ciHigh:  {{ row.CI_High  if row.CI_High  is not none else 'null' }}
-        }{% if not loop.last %},{% endif %}
-        {% endfor %}
-    ];
+    const rawData = {{ data | tojson }};
+
+    const chartData = rawData.map(row => ({
+        drug: row.Drug ?? null,
+        tau: row.Tau_Point !== null ? Number(row.Tau_Point) : null,
+        ciHigh: row.CI_High !== null ? Number(row.CI_High) : null
+    }));
 
     const valid = chartData.filter(d => d.tau !== null && d.ciHigh !== null);
     if (!valid.length) return;
 
-    /* ── colour logic mirrors biostat report ── */
+    valid.sort((a, b) => a.tau - b.tau);
+
     function getColor(tau, ciHigh) {
-        if (tau < 0 && ciHigh < 0)  return '#27ae60';  /* green       */
-        if (tau < 0 && ciHigh >= 0) return '#82c882';  /* light green */
-        if (tau >= 0 && ciHigh < 0) return '#e74c3c';  /* red         */
-        return '#b0b0b0';                               /* light gray  */
+        if (tau < 0 && ciHigh < 0) return '#27ae60';
+        if (tau < 0 && ciHigh >= 0) return '#f39c12';
+        return '#b0b0b0';
     }
 
-    /* ── best drug = lowest Tau_Point ── */
-    const bestIdx = valid.reduce((mi, d, i, a) => d.tau < a[mi].tau ? i : mi, 0);
+    const bestIdx = 0;
+    const labels = valid.map(d => d.drug);
+    const colors = valid.map(d => getColor(d.tau, d.ciHigh));
 
-    const labels    = valid.map(d => d.drug);
-    const colors    = valid.map(d => getColor(d.tau, d.ciHigh));
+    const floatBars = valid.map(d => [
+        Math.min(d.tau, d.ciHigh),
+        Math.max(d.tau, d.ciHigh)
+    ]);
 
-    /* floating bar: [bottom, top] – renders as a thin vertical line */
-    const floatBars = valid.map(d => [Math.min(d.tau, d.ciHigh), Math.max(d.tau, d.ciHigh)]);
+    const scatterPts = valid.map(d => ({ x: d.drug, y: d.tau }));
+    const pointRadii = valid.map((_, i) => i === bestIdx ? 10 : 6);
+    const pointBWidths = valid.map((_, i) => i === bestIdx ? 3 : 1);
+    const pointBColors = valid.map((_, i) => i === bestIdx ? '#1a252f' : '#666');
 
-    /* scatter points – x must match category labels */
-    const scatterPts   = valid.map(d => ({ x: d.drug, y: d.tau }));
-    const pointRadii   = valid.map((_, i) => i === bestIdx ? 9 : 5);
-    const pointBWidths = valid.map((_, i) => i === bestIdx ? 2.5 : 1);
-    const pointBColors = valid.map((_, i) => i === bestIdx ? '#111' : '#666');
-
-    /* ── inline plugin: dashed reference line at y = 0 ── */
     const zeroLinePlugin = {
         id: 'zeroLine',
         afterDraw(chart) {
@@ -146,81 +469,82 @@
             const yPx = y.getPixelForValue(0);
             ctx.save();
             ctx.beginPath();
-            ctx.moveTo(x.left,  yPx);
+            ctx.moveTo(x.left, yPx);
             ctx.lineTo(x.right, yPx);
-            ctx.strokeStyle = '#444';
-            ctx.lineWidth   = 1.5;
-            ctx.setLineDash([7, 4]);
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 4]);
             ctx.stroke();
             ctx.setLineDash([]);
             ctx.restore();
         }
     };
 
-    /* ── chart ── */
-    const ctx = document.getElementById('treatmentChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'bar',
-        plugins: [zeroLinePlugin],
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    /* thin bar = vertical line from Tau to CI High */
-                    label: 'Tau → CI High',
-                    data:            floatBars,
-                    backgroundColor: colors.map(c => c + 'bb'),
-                    borderColor:     colors,
-                    borderWidth:     1,
-                    barThickness:    3,
-                    order:           2
-                },
-                {
-                    /* dot at Tau Point */
-                    label:          'Tau Point',
-                    type:           'scatter',
-                    data:           scatterPts,
-                    backgroundColor: colors,
-                    borderColor:    pointBColors,
-                    borderWidth:    pointBWidths,
-                    pointRadius:    pointRadii,
-                    pointHoverRadius: pointRadii.map(r => r + 2),
-                    order:          1
-                }
-            ]
-        },
-        options: {
-            responsive:          true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    title: { display: true, text: 'Drug' },
-                    ticks: { maxRotation: 45, minRotation: 30, font: { size: 12 } }
-                },
-                y: {
-                    title: { display: true, text: 'Treatment Effect (Tau)' }
-                }
+    const ctx = document.getElementById('treatmentChart');
+    if (ctx) {
+        new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            plugins: [zeroLinePlugin],
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'CI Range',
+                        data: floatBars,
+                        backgroundColor: colors.map(c => c + 'aa'),
+                        borderColor: colors,
+                        borderWidth: 1,
+                        barThickness: 4,
+                        order: 2
+                    },
+                    {
+                        label: 'Treatment Effect',
+                        type: 'scatter',
+                        data: scatterPts,
+                        backgroundColor: colors,
+                        borderColor: pointBColors,
+                        borderWidth: pointBWidths,
+                        pointRadius: pointRadii,
+                        pointHoverRadius: pointRadii.map(r => r + 2),
+                        order: 1
+                    }
+                ]
             },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    /* show tooltip only for the scatter dot layer */
-                    filter: item => item.datasetIndex === 1,
-                    callbacks: {
-                        title: items => items[0]?.label || '',
-                        label: item => {
-                            const d    = valid[item.dataIndex];
-                            const best = item.dataIndex === bestIdx ? '  ★ Best drug' : '';
-                            return [
-                                'Tau: '     + d.tau.toFixed(4)    + best,
-                                'CI High: ' + d.ciHigh.toFixed(4)
-                            ];
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Treatment', font: { weight: 'bold' } },
+                        grid: { display: false }
+                    },
+                    y: {
+                        title: { display: true, text: 'Treatment Effect (Tau)', font: { weight: 'bold' } },
+                        grid: { color: '#eee' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        filter: item => item.datasetIndex === 1,
+                        backgroundColor: '#1a252f',
+                        padding: 12,
+                        callbacks: {
+                            title: items => items[0]?.label || '',
+                            label: item => {
+                                const d = valid[item.dataIndex];
+                                const best = item.dataIndex === bestIdx ? ' (Recommended)' : '';
+                                return [
+                                    'Effect: ' + d.tau.toFixed(4) + best,
+                                    'CI Upper: ' + d.ciHigh.toFixed(4)
+                                ];
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
+    }
 })();
 </script>
 {% endblock %}

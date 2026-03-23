@@ -208,7 +208,7 @@ def main():
         print("1. Start the Flask app: python app_ui/app.py")
         print("2. Or test the inference: python run_test.py")
         print("\nNote: For Plumber API mode, ensure the Plumber service")
-        print("      is running at http://localhost:8000")
+        print("      is running at http://localhost:8002")
     else:
         print("✗ SOME TESTS FAILED - Please review the errors above")
         return 1

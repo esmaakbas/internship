@@ -9,6 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from services.inference_service import perform_inference
 from services.base_payload import BASE_PATIENT_PAYLOAD
+from services.decision_engine import classify_treatments
 from validators.patient_form_parser import parse_patient_form
 
 app = Flask(__name__)
@@ -62,7 +63,12 @@ def predict():
                 502,
             )
 
-        return render_template("results.html", data=result["data"])
+        return render_template(
+            "results.html",
+            data=result["data"],
+            decision_summary=result.get("decision_summary"),
+            alex_guidance=result.get("alex_guidance")
+        )
 
     # GET request - legacy backward-compatibility path (subprocess flow)
     result = perform_inference()
@@ -93,7 +99,11 @@ def test_plumber():
             502,
         )
 
-    return render_template("results.html", data=result["data"])
+    return render_template(
+        "results.html",
+        data=result["data"],
+        alex_guidance=result.get("alex_guidance")
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -166,6 +176,87 @@ def upload_patient_csv():
             prefill_data[field] = row[field]
 
     return render_template("index.html", prefill_data=prefill_data, upload_filename=file.filename)
+
+
+@app.route("/test-alex-ui")
+def test_alex_ui():
+    """
+    Test route to verify Alex UI integration without requiring Plumber API.
+    Returns mock inference results to test the results.html template and Alex guidance display.
+    """
+    # Mock inference results
+    mock_data = [
+        {"Drug": "BB", "Tau_Point": -0.123, "CI_Low": -0.234, "CI_High": -0.012},
+        {"Drug": "RAS", "Tau_Point": -0.098, "CI_Low": -0.187, "CI_High": -0.009},
+        {"Drug": "SP", "Tau_Point": -0.056, "CI_Low": -0.145, "CI_High": 0.033},
+        {"Drug": "LD", "Tau_Point": -0.023, "CI_Low": -0.112, "CI_High": 0.066},
+    ]
+
+    # Generate decision summary from mock data
+    mock_decision_summary = classify_treatments(mock_data)
+
+    # Mock Alex guidance (successful)
+    mock_alex_guidance = {
+        "ok": True,
+        "request_id": "test_mock_request",
+        "status": "ok",
+        "answer": "Based on the treatment effect estimates, BB shows the strongest beneficial effect (tau=-0.123, 95% CI: -0.234 to -0.012), followed by RAS (tau=-0.098), SP (tau=-0.056), and LD (tau=-0.023). All treatments show negative point estimates indicating potential benefit, though the confidence intervals vary in their precision. BB has the most favorable profile with both the point estimate and confidence interval indicating benefit.",
+        "model": "test-mock-model",
+        "warnings": [],
+        "metadata": {},
+        "error": None,
+        "raw": {}
+    }
+
+    return render_template(
+        "results.html",
+        data=mock_data,
+        decision_summary=mock_decision_summary,
+        alex_guidance=mock_alex_guidance
+    )
+
+
+@app.route("/test-alex-ui-error")
+def test_alex_ui_error():
+    """
+    Test route showing Alex guidance failure scenario.
+    Displays how the UI handles Alex API being down or erroring.
+    """
+    # Mock inference results (same as success test)
+    mock_data = [
+        {"Drug": "BB", "Tau_Point": -0.123, "CI_Low": -0.234, "CI_High": -0.012},
+        {"Drug": "RAS", "Tau_Point": -0.098, "CI_Low": -0.187, "CI_High": -0.009},
+        {"Drug": "SP", "Tau_Point": -0.056, "CI_Low": -0.145, "CI_High": 0.033},
+        {"Drug": "LD", "Tau_Point": -0.023, "CI_Low": -0.112, "CI_High": 0.066},
+    ]
+
+    # Generate decision summary from mock data
+    mock_decision_summary = classify_treatments(mock_data)
+
+    # Mock Alex guidance (failed)
+    mock_alex_guidance = {
+        "ok": False,
+        "request_id": "test_mock_error",
+        "status": "error",
+        "answer": None,
+        "model": None,
+        "warnings": [],
+        "metadata": {},
+        "error": {
+            "code": "CONNECTION_ERROR",
+            "message": "Failed to connect to guidance API"
+        },
+        "raw": {}
+    }
+
+    return render_template(
+        "results.html",
+        data=mock_data,
+        decision_summary=mock_decision_summary,
+        alex_guidance=mock_alex_guidance
+    )
+
+
 
 
 if __name__ == "__main__":

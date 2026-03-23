@@ -1,5 +1,9 @@
+import logging
 from r_pipeline_link.r_runner import run_inference
 from clients.plumber_client import call_plumber_predict
+from services.decision_engine import classify_treatments
+
+logger = logging.getLogger(__name__)
 
 
 def _sanitise_result_list(result_list: list) -> list:
@@ -49,6 +53,83 @@ def _rank_result_list(result_list: list) -> list:
     return ranked + other + last
 
 
+def _get_alex_guidance(patient_payload: dict, inference_result: dict) -> dict:
+    """
+    Try to get LLM guidance from Alex's API.
+
+    This function is fail-safe and never raises exceptions. If any error occurs
+    (payload mapping, network, API error, etc.), it returns an error structure
+    instead of crashing the main inference flow.
+
+    Args:
+        patient_payload: The original patient data dict sent to Plumber.
+        inference_result: The successful inference result dict with structure:
+                          {"success": True, "data": [...]}
+
+    Returns:
+        Dict with guidance response or error. Structure matches the normalized
+        response from request_guidance():
+        {
+            "ok": bool,              # True only if guidance succeeded
+            "request_id": str,       # Request identifier (or None on error)
+            "status": str,           # "ok", "error", etc.
+            "answer": str or None,   # LLM response text
+            "model": str or None,    # Model name
+            "warnings": list,        # API warnings
+            "metadata": dict,        # Additional metadata
+            "error": dict or None,   # Error details if failed
+            "raw": dict              # Full raw response from API
+        }
+    """
+    try:
+        # Lazy imports to avoid issues if these modules have problems
+        from services.alex_payload_mapper import build_alex_guidance_payload
+        from clients.alex_client import request_guidance
+
+        logger.info("Requesting Alex LLM guidance for inference result")
+
+        # Build Alex payload from patient data and inference result
+        alex_payload = build_alex_guidance_payload(patient_payload, inference_result)
+
+        # Request guidance from Alex's API
+        guidance_response = request_guidance(
+            question=alex_payload["question"],
+            patient_variables=alex_payload["patient_variables"],
+            request_id=alex_payload["request_id"],
+            options=alex_payload["options"]
+        )
+
+        if guidance_response["ok"]:
+            logger.info(f"Alex guidance succeeded (request_id={guidance_response['request_id']})")
+        else:
+            logger.warning(f"Alex guidance failed: {guidance_response.get('error', {}).get('message', 'Unknown error')}")
+
+        return guidance_response
+
+    except Exception as e:
+        # Catch ALL errors (mapping, import, network, etc.) and return error structure
+        # This ensures the main inference never fails due to Alex integration
+        logger.exception(f"Failed to get Alex guidance: {e}")
+        return {
+            "ok": False,
+            "request_id": None,
+            "status": "error",
+            "answer": None,
+            "model": None,
+            "warnings": [],
+            "metadata": {},
+            "error": {
+                "code": "INTEGRATION_ERROR",
+                "message": f"Failed to get guidance: {str(e)}",
+                "details": {
+                    "exception": str(e),
+                    "type": type(e).__name__
+                }
+            },
+            "raw": {}
+        }
+
+
 def perform_inference(input_filename=None, input_data=None):
     """
     Business layer for inference.
@@ -75,7 +156,20 @@ def perform_inference(input_filename=None, input_data=None):
             result_list = call_plumber_predict(input_data)
             result_list = _sanitise_result_list(result_list)
             result_list = _rank_result_list(result_list)
-            return {"success": True, "data": result_list}
+
+            # Build the main inference result
+            inference_result = {"success": True, "data": result_list}
+
+            # Classify treatments into decision tiers
+            decision_summary = classify_treatments(result_list)
+            inference_result["decision_summary"] = decision_summary
+
+            # Try to get Alex LLM guidance (non-blocking)
+            # If this fails, we still return the successful inference result
+            alex_guidance = _get_alex_guidance(input_data, inference_result)
+            inference_result["alex_guidance"] = alex_guidance
+
+            return inference_result
         except RuntimeError as e:
             return {"success": False, "error": str(e)}
 

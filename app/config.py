@@ -91,8 +91,12 @@ else:
     FALLBACK_OUTPUT_PATH = None
 
 # Plumber API Configuration
-PLUMBER_API_URL = os.getenv("PLUMBER_API_URL", "http://localhost:8000")
+PLUMBER_API_URL = os.getenv("PLUMBER_API_URL", "http://localhost:8002")
 PLUMBER_PREDICT_URL = f"{PLUMBER_API_URL}/predict"
+
+# Alex LLM Guidance API Configuration
+ALEX_GUIDANCE_URL = os.getenv("ALEX_GUIDANCE_URL", "http://localhost:8001/guidance/generate")
+ALEX_TIMEOUT_SECONDS = int(os.getenv("ALEX_TIMEOUT_SECONDS", "30"))
 
 # Flask Configuration
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "capsico_inference_secret_key_2026")
