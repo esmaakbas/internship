@@ -176,7 +176,9 @@ def build_alex_guidance_payload(
 
     # Build default options
     default_options = {
-        "use_retrieval": False,
+        "use_retrieval": True,
+        "retrieval_mode": "hybrid",
+        "pipeline_variant": "drug_dosing",
         "use_example_response": False,
         "temperature": 0.2,
         "max_tokens": 260

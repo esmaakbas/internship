@@ -77,6 +77,8 @@ def _get_alex_guidance(patient_payload: dict, inference_result: dict) -> dict:
             "model": str or None,    # Model name
             "warnings": list,        # API warnings
             "metadata": dict,        # Additional metadata
+            "verification": dict or None,  # Optional verification result
+            "rag": list,             # Retrieved context snippets
             "error": dict or None,   # Error details if failed
             "raw": dict              # Full raw response from API
         }
@@ -118,6 +120,8 @@ def _get_alex_guidance(patient_payload: dict, inference_result: dict) -> dict:
             "model": None,
             "warnings": [],
             "metadata": {},
+            "verification": None,
+            "rag": [],
             "error": {
                 "code": "INTEGRATION_ERROR",
                 "message": f"Failed to get guidance: {str(e)}",

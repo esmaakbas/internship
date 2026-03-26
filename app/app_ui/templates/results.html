@@ -3,6 +3,27 @@
 {% block title %}Treatment Decision - Capsico{% endblock %}
 {% block nav_predict %}active{% endblock %}
 
+{% block extra_head %}
+<style>
+    #resultTabs .nav-link {
+        color: #495057;
+        transition: color 0.15s ease;
+    }
+
+    #resultTabs .nav-link:hover,
+    #resultTabs .nav-link:focus {
+        color: #c0392b;
+    }
+
+    #resultTabs .nav-link.active {
+        color: #c0392b !important;
+        border-color: #dee2e6 #dee2e6 #c0392b;
+        border-bottom: 2px solid #c0392b;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
 
@@ -15,11 +36,12 @@
 
     <div class="card mb-4 shadow" style="border: none; border-radius: 12px; overflow: hidden;">
         <!-- Colored header bar -->
-        <div style="height: 6px; background:
-            {% if conf == 'high' %}#27ae60
-            {% elif conf == 'moderate' %}#f39c12
-            {% elif conf == 'low' %}#e74c3c
-            {% else %}#95a5a6{% endif %};"></div>
+        <div class="
+            {% if conf == 'high' %}bg-success
+            {% elif conf == 'moderate' %}bg-warning
+            {% elif conf == 'low' %}bg-danger
+            {% else %}bg-secondary{% endif %}"
+            style="height: 6px;"></div>
 
         <div class="card-body py-4 px-4">
             <!-- Main Decision Row -->
@@ -128,7 +150,7 @@
         <li class="nav-item">
             <a class="nav-link active" id="overview-tab" data-toggle="tab" href="#overview" role="tab"
                style="font-weight: 500; color: #495057;">
-                Summary
+                Overview
             </a>
         </li>
         <li class="nav-item">
@@ -152,88 +174,100 @@
              ═══════════════════════════════════════════════════════════════════════ -->
         <div class="tab-pane fade show active" id="overview" role="tabpanel">
 
-            <!-- Quick Reference Table -->
-            <div class="card mb-4">
-                <div class="card-header" style="background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
-                    <strong>Treatment Effect Summary</strong>
+            <div class="row align-items-stretch">
+                <div class="col-lg-5">
+                    <!-- Recommendation Snapshot -->
+                    <div class="card h-100 mb-4">
+                        <div class="card-header" style="background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
+                            <strong>Evidence Snapshot</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-2" style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d;">Recommended treatment</div>
+                            <div class="mb-3" style="font-size: 1.7rem; font-weight: 700; color: #1a252f; line-height: 1.1;">
+                                {{ decision_summary.primary_recommendation.Drug if decision_summary and decision_summary.primary_recommendation else 'None' }}
+                            </div>
+
+                            {% if decision_summary %}
+                            <div class="mb-3">
+                                <span class="badge
+                                    {% if conf == 'high' %}badge-success
+                                    {% elif conf == 'moderate' %}badge-warning text-dark
+                                    {% elif conf == 'low' %}badge-danger
+                                    {% else %}badge-secondary{% endif %}" style="font-size: 0.78rem; padding: 5px 10px;">
+                                    {{ conf|upper }} CONFIDENCE
+                                </span>
+                            </div>
+                            {% if decision_summary.decision_reason %}
+                            <p class="mb-0" style="font-size: 0.9rem; color: #55616d;">
+                                {{ decision_summary.decision_reason }}
+                            </p>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body p-0">
-                    <table class="table table-hover mb-0">
-                        <thead style="background: #f8f9fa;">
-                            <tr>
-                                <th style="width: 25%; padding: 12px 16px;">Treatment</th>
-                                <th style="width: 25%; padding: 12px 16px;">Effect Estimate</th>
-                                <th style="width: 25%; padding: 12px 16px;">Confidence Interval</th>
-                                <th style="width: 25%; padding: 12px 16px;">Classification</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in data %}
-                            {% set tau = row.get("Tau_Point") %}
-                            {% set ci_high = row.get("CI_High") %}
-                            {% set is_recommended = decision_summary and decision_summary.primary_recommendation and row.get("Drug") == decision_summary.primary_recommendation.Drug %}
-                            <tr {% if is_recommended %}style="background: #f0fff4;"{% endif %}>
-                                <td style="padding: 12px 16px; vertical-align: middle;">
-                                    <strong style="font-size: 1.05rem;">{{ row.get("Drug", "-") }}</strong>
-                                    {% if is_recommended %}
-                                    <span class="badge badge-success ml-2" style="font-size: 0.7rem;">RECOMMENDED</span>
-                                    {% endif %}
-                                </td>
-                                <td style="padding: 12px 16px; vertical-align: middle; font-family: monospace;">
-                                    {% if tau is not none %}
-                                    {{ "%.4f"|format(tau) }}
-                                    {% if tau < 0 %}<span style="color: #27ae60; margin-left: 4px;">&#8595;</span>{% endif %}
-                                    {% else %}-{% endif %}
-                                </td>
-                                <td style="padding: 12px 16px; vertical-align: middle; font-family: monospace; color: #666;">
-                                    {% if ci_high is not none %}
-                                    upper bound: {{ "%.4f"|format(ci_high) }}
-                                    {% else %}N/A{% endif %}
-                                </td>
-                                <td style="padding: 12px 16px; vertical-align: middle;">
-                                    {% if tau is none %}
-                                    <span style="color: #95a5a6;">Insufficient data</span>
-                                    {% elif tau < 0 and ci_high is not none and ci_high < 0 %}
-                                    <span style="color: #27ae60; font-weight: 600;">
-                                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #27ae60; margin-right: 6px;"></span>
-                                        Significant benefit
-                                    </span>
-                                    {% elif tau < 0 %}
-                                    <span style="color: #f39c12; font-weight: 500;">
-                                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f39c12; margin-right: 6px;"></span>
-                                        Suggestive benefit
-                                    </span>
-                                    {% else %}
-                                    <span style="color: #95a5a6;">
-                                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #bdc3c7; margin-right: 6px;"></span>
-                                        No supported benefit
-                                    </span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+
+                <div class="col-lg-7">
+                    <!-- Treatment Quick View -->
+                    <div class="card h-100 mb-4">
+                        <div class="card-header" style="background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
+                            <strong>Treatment Quick View</strong>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-sm mb-0">
+                                <thead style="background: #f8f9fa;">
+                                    <tr>
+                                        <th style="padding: 11px 14px;">Treatment</th>
+                                        <th style="padding: 11px 14px;">Effect</th>
+                                        <th style="padding: 11px 14px;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in data %}
+                                    {% set tau = row.get("Tau_Point") %}
+                                    {% set ci_high = row.get("CI_High") %}
+                                    {% set is_recommended = decision_summary and decision_summary.primary_recommendation and row.get("Drug") == decision_summary.primary_recommendation.Drug %}
+                                    <tr {% if is_recommended %}style="background: #f0fff4;"{% endif %}>
+                                        <td style="padding: 11px 14px;">
+                                            <strong>{{ row.get("Drug", "-") }}</strong>
+                                            {% if is_recommended %}
+                                            <span class="badge badge-success ml-2" style="font-size: 0.65rem;">Top</span>
+                                            {% endif %}
+                                        </td>
+                                        <td style="padding: 11px 14px; font-family: monospace;">
+                                            {{ "%.4f"|format(tau) if tau is not none else "-" }}
+                                        </td>
+                                        <td style="padding: 11px 14px;">
+                                            {% if tau is none %}
+                                            <span class="text-muted">Unknown</span>
+                                            {% elif tau < 0 and ci_high is not none and ci_high < 0 %}
+                                            <span class="badge badge-success">Significant</span>
+                                            {% elif tau < 0 %}
+                                            <span class="badge badge-warning text-dark">Suggestive</span>
+                                            {% else %}
+                                            <span class="badge" style="background: #e9ecef; color: #495057;">No benefit</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Interpretation Key -->
-            <div class="row">
-                <div class="col-md-8">
-                    <div class="alert" style="background: #f8f9fa; border: 1px solid #e9ecef; color: #495057;">
-                        <strong style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">How to interpret</strong>
-                        <ul class="mb-0 mt-2" style="font-size: 0.9rem; padding-left: 20px;">
-                            <li><strong>Effect Estimate (Tau):</strong> Negative values indicate benefit. More negative = stronger effect.</li>
-                            <li><strong>CI upper bound &lt; 0:</strong> Effect is statistically significant at 90% confidence.</li>
-                            <li><strong>CI upper bound &ge; 0:</strong> Effect is suggestive but not conclusive.</li>
-                        </ul>
+            <div class="card mb-4" style="background: #f8f9fa; border: 1px solid #e9ecef; margin-top: 20px;">
+                <div class="card-body d-flex flex-wrap align-items-center justify-content-between" style="gap: 12px;">
+                    <div style="font-size: 0.92rem; color: #56606b;">
+                        Overview shows only key decision signals. Use other tabs for full evidence and AI explanation details.
                     </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="text-center py-3">
-                        <a href="#comparison" onclick="$('#comparison-tab').tab('show'); return false;"
-                           class="btn btn-outline-secondary">
-                            View Full Chart &amp; Data &rarr;
+                    <div class="d-flex" style="gap: 10px;">
+                        <a href="#comparison" onclick="$('#comparison-tab').tab('show'); return false;" class="btn btn-outline-secondary btn-sm">
+                            Open Evidence Breakdown
+                        </a>
+                        <a href="#explanation" onclick="$('#explanation-tab').tab('show'); return false;" class="btn btn-outline-secondary btn-sm">
+                            Open AI Explanation
                         </a>
                     </div>
                 </div>
@@ -360,38 +394,87 @@
              ═══════════════════════════════════════════════════════════════════════ -->
         <div class="tab-pane fade" id="explanation" role="tabpanel">
             {% if alex_guidance %}
-            <div class="card">
-                <div class="card-header" style="background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
-                    <strong>AI-Generated Explanation</strong>
-                    <span class="text-muted ml-2" style="font-size: 0.85rem;">(supplementary)</span>
+            <div class="card" style="border: 1px solid #e9ecef; border-radius: 10px;">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
+                    <div>
+                        <strong>AI-Generated Explanation</strong>
+                        <span class="text-muted ml-2" style="font-size: 0.85rem;">(supplementary)</span>
+                    </div>
+                    {% if alex_guidance.ok %}
+                    <span class="badge badge-success" style="font-size: 0.72rem;">Available</span>
+                    {% else %}
+                    <span class="badge badge-secondary" style="font-size: 0.72rem;">Unavailable</span>
+                    {% endif %}
                 </div>
                 <div class="card-body">
                     {% if alex_guidance.ok and alex_guidance.answer %}
 
-                    <div style="background: #f8fbff; border-left: 4px solid #4a90d9; padding: 16px 20px; margin-bottom: 16px;">
-                        <p style="font-size: 1rem; line-height: 1.75; margin-bottom: 0; color: #2c3e50;">
-                            {{ alex_guidance.answer }}
-                        </p>
+                    <div class="mb-3">
+                        <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d; margin-bottom: 6px;">Explanation</div>
+                        <div style="background: #f8fbff; border: 1px solid #d9e9fb; border-left: 4px solid #4a90d9; border-radius: 6px; padding: 16px 20px;">
+                        <div style="font-size: 1rem; line-height: 1.7; margin-bottom: 0; color: #2c3e50;">
+                            {% for line in (alex_guidance.answer|trim|replace('\r\n', '\n')).split('\n') %}
+                            {% set clean_line = line|trim %}
+                            {% if clean_line %}
+                            <div>
+                                {% if ':' in clean_line %}
+                                <strong>{{ clean_line.split(':', 1)[0] }}:</strong> {{ clean_line.split(':', 1)[1]|trim }}
+                                {% else %}
+                                {{ clean_line }}
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
                     </div>
 
                     {% if alex_guidance.warnings and alex_guidance.warnings|length > 0 %}
-                    <div class="alert alert-warning py-2" style="font-size: 0.88rem;">
-                        <strong>Notes:</strong>
-                        {% for warning in alex_guidance.warnings %}
-                        {{ warning }}{% if not loop.last %} | {% endif %}
-                        {% endfor %}
+                    <div class="mb-3">
+                        <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d; margin-bottom: 6px;">Notes</div>
+                        <div class="alert alert-warning py-2 mb-0" style="font-size: 0.88rem;">
+                            <ul class="mb-0" style="padding-left: 18px;">
+                                {% for warning in alex_guidance.warnings %}
+                                <li>{{ warning }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
                     </div>
                     {% endif %}
 
-                    <p class="text-muted mb-0" style="font-size: 0.8rem;">
-                        This explanation is generated from the treatment effect data shown in the Evidence tab.
-                        It does not replace clinical judgment.
-                        {% if alex_guidance.model %}<br>Model: {{ alex_guidance.model }}{% endif %}
-                        {% if alex_guidance.request_id %} | Request: {{ alex_guidance.request_id }}{% endif %}
-                    </p>
+                    {% if alex_guidance.verification %}
+                    <div class="mb-3">
+                        <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d; margin-bottom: 6px;">Quality Check</div>
+                        <div class="alert alert-light py-2 mb-0" style="font-size: 0.84rem; border: 1px solid #e9ecef;">
+                            <strong>Verification:</strong>
+                            {% if alex_guidance.verification.verdict %}
+                            {{ alex_guidance.verification.verdict|upper }}
+                            {% endif %}
+                            {% if alex_guidance.verification.confidence %}
+                            (confidence: {{ alex_guidance.verification.confidence }})
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="rounded" style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px 12px;">
+                        <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d; margin-bottom: 4px;">System Details</div>
+                        <div class="text-muted" style="font-size: 0.8rem; line-height: 1.5;">
+                            This explanation is generated from the treatment effect data shown in the Evidence tab.
+                            It does not replace clinical judgment.
+                            {% if alex_guidance.model %}<br>Model: {{ alex_guidance.model }}{% endif %}
+                            {% if alex_guidance.request_id %}<br>Request: {{ alex_guidance.request_id }}{% endif %}
+                            {% if alex_guidance.metadata and alex_guidance.metadata.pipeline_runner %}
+                            <br>Pipeline: {{ alex_guidance.metadata.pipeline_runner }}
+                            {% endif %}
+                            {% if alex_guidance.metadata and alex_guidance.metadata.retrieval_mode %}
+                            | Retrieval: {{ alex_guidance.metadata.retrieval_mode }}
+                            {% endif %}
+                        </div>
+                    </div>
 
                     {% else %}
-                    <div class="alert alert-secondary mb-0">
+                    <div class="alert alert-secondary mb-0" style="border: 1px solid #dee2e6;">
                         <strong>AI explanation unavailable</strong>
                         <p class="mb-0 mt-1" style="font-size: 0.92rem;">
                             The treatment recommendation above is based on the statistical analysis.
@@ -427,9 +510,18 @@
 
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script id="results-data" type="application/json">{{ data | tojson }}</script>
 <script>
 (function () {
-    const rawData = {{ data | tojson }};
+    const rawDataNode = document.getElementById('results-data');
+    if (!rawDataNode) return;
+
+    let rawData = [];
+    try {
+        rawData = JSON.parse(rawDataNode.textContent || '[]');
+    } catch (e) {
+        return;
+    }
 
     const chartData = rawData.map(row => ({
         drug: row.Drug ?? null,
