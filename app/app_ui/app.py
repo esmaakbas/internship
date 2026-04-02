@@ -1,8 +1,9 @@
-from flask import Flask, render_template, request, flash, redirect, url_for, jsonify
+from flask import Flask, render_template, request, flash, redirect, url_for, jsonify, g
 import sys
 import os
 import pandas as pd
 from werkzeug.utils import secure_filename
+from flask_session import Session
 
 # root path ekliyoruz ki services import edilebilsin
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -12,13 +13,82 @@ from services.base_payload import BASE_PATIENT_PAYLOAD
 from services.decision_engine import classify_treatments
 from validators.patient_form_parser import parse_patient_form
 
-from config import FLASK_SECRET_KEY, FLASK_DEBUG, FLASK_HOST, FLASK_PORT
+from config import (
+    FLASK_SECRET_KEY,
+    FLASK_DEBUG,
+    FLASK_HOST,
+    FLASK_PORT,
+    ALLOWED_DEBUG_IPS,
+    SESSION_TYPE,
+    SESSION_PERMANENT,
+    SESSION_COOKIE_HTTPONLY,
+    SESSION_COOKIE_SECURE,
+    SESSION_COOKIE_SAMESITE,
+    AUTH0_ENABLED,
+)
 
-from database import check_connection, count_users
+from database import check_connection, count_users, validate_database
+
+# Import authentication module only if Auth0 is configured
+if AUTH0_ENABLED:
+    import auth
 
 
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
+
+# Configure Flask-Session for server-side sessions
+app.config['SESSION_TYPE'] = 'filesystem'  # Use filesystem for development
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_USE_SIGNER'] = True  # Sign session cookies
+app.config['SESSION_KEY_PREFIX'] = 'capsico:'  # Unique prefix
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SECURE'] = SESSION_COOKIE_SECURE  # From config (False in debug, True in production)
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_NAME'] = 'capsico_session'  # Custom cookie name
+
+# Ensure session directory exists
+import os
+os.makedirs(os.path.join(os.path.dirname(__file__), 'flask_session'), exist_ok=True)
+
+Session(app)
+
+# Conditionally register authentication routes
+if AUTH0_ENABLED:
+    auth.register_auth_routes(app)
+    app.logger.info("Authentication enabled (Auth0 configured)")
+else:
+    app.logger.warning("Authentication DISABLED - Auth0 not configured in .env")
+    app.logger.warning("To enable authentication, configure AUTH0_DOMAIN, AUTH0_CLIENT_ID, and AUTH0_CLIENT_SECRET")
+
+    # Add before_request handler to set g.user to None when auth is disabled
+    @app.before_request
+    def load_user_without_auth():
+        g.user = None
+
+# Validate database connection on startup
+try:
+    validate_database()
+    app.logger.info("Database validation successful")
+except Exception as exc:
+    app.logger.error(f"Database validation failed: {exc}")
+    app.logger.warning("App will start but database operations may fail")
+
+
+# Make auth state available in all templates
+@app.context_processor
+def inject_auth_state():
+    """Inject authentication state into all templates.
+
+    Provides:
+        auth_enabled: Whether Auth0 is configured
+        user: Current user dict from g.user (None if not logged in)
+    """
+    return {
+        'auth_enabled': AUTH0_ENABLED,
+        'user': getattr(g, 'user', None)
+    }
+
 
 # Configure upload folder
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'inputs')
@@ -33,7 +103,57 @@ def allowed_file(filename):
 
 @app.route("/")
 def home():
+    # g.user is set by auth.load_user_into_g() if auth is enabled
+    # or by load_user_without_auth() if auth is disabled
     return render_template("index.html")
+
+
+# Protected routes - only register if authentication is enabled
+if AUTH0_ENABLED:
+    @app.route("/profile")
+    @auth.login_required
+    def profile():
+        """Protected route example - requires authentication.
+
+        Demonstrates:
+        - @login_required decorator
+        - Accessing g.user for current user info
+        - User data from database (synced from Auth0)
+        """
+        return render_template("profile.html", user=g.user)
+
+
+    @app.route("/admin")
+    @auth.admin_required
+    def admin_panel():
+        """Admin-only route example - requires admin role.
+
+        Demonstrates:
+        - @admin_required decorator
+        - Role-based access control
+        """
+        return "<h1>Admin Panel</h1><p>Only admins can see this page.</p><p><a href='/'>Home</a></p>"
+else:
+    # When auth is disabled, protected routes return a message
+    @app.route("/profile")
+    def profile():
+        return (
+            "<h1>Authentication Required</h1>"
+            "<p>This feature requires authentication to be enabled.</p>"
+            "<p>Configure Auth0 credentials in your .env file to enable authentication.</p>"
+            "<p><a href='/'>Back to Home</a></p>",
+            200
+        )
+
+    @app.route("/admin")
+    def admin_panel():
+        return (
+            "<h1>Authentication Required</h1>"
+            "<p>This feature requires authentication to be enabled.</p>"
+            "<p>Configure Auth0 credentials in your .env file to enable authentication.</p>"
+            "<p><a href='/'>Back to Home</a></p>",
+            200
+        )
 
 
 @app.route("/predict", methods=['GET', 'POST'])
@@ -61,6 +181,13 @@ def predict():
 
         result = perform_inference(input_data=payload)
 
+        # TODO: NEXT PHASE - Save prediction to database with user_id
+        # When authenticated users make predictions, save to predictions table:
+        # user_id = g.user['id'] if g.user else None
+        # save_prediction(user_id=user_id, input_payload=payload,
+        #                 output_payload=result['data'], status='success')
+        # This will enable prediction history feature in the next phase.
+
         if not result["success"]:
             return (
                 f"<h2>Inference Error</h2><pre>{result['error']}</pre>"
@@ -72,7 +199,8 @@ def predict():
             "results.html",
             data=result["data"],
             decision_summary=result.get("decision_summary"),
-            alex_guidance=result.get("alex_guidance")
+            alex_guidance=result.get("alex_guidance"),
+            patient_data=payload
         )
 
     # GET request - legacy backward-compatibility path (subprocess flow)
@@ -107,7 +235,8 @@ def test_plumber():
     return render_template(
         "results.html",
         data=result["data"],
-        alex_guidance=result.get("alex_guidance")
+        alex_guidance=result.get("alex_guidance"),
+        patient_data=payload
     )
 
 
@@ -116,12 +245,40 @@ def test_plumber():
 # so the two routes stay in sync automatically.
 # ---------------------------------------------------------------------------
 _PREFILL_FIELDS = [
-    "patientid",
-    "age", "sex",
-    "baseline_bmi", "baseline_sbp", "baseline_hr", "baseline_k",
-    "lvef", "baseline_nyha",
-    "mh_af", "mh_ckd", "mh_dm",
+    # Patient info
+    "patientid", "age", "sex",
+
+    # Vital signs
+    "baseline_sbp", "baseline_dpb", "baseline_hr", "baseline_bw", "baseline_bmi",
+
+    # Cardiac function
+    "lvef", "baseline_nyha", "baseline_ischaemic", "baseline_qrs",
+    "PM_Rhythm_ECG", "EP_HF_encoded",
+
+    # Physical examination
+    "baseline_orthopnea", "baseline_rales", "baseline_jdv", "baseline_edema",
+
+    # Medical history
+    "mh_af", "mh_ckd", "mh_dm", "mh_hypertension", "mh_mi", "mh_agina",
+    "mh_cabg", "mh_vavhd", "mh_stroke", "mh_bbb", "mh_impl_dev",
+    "mh_copd", "mh_hept", "mh_smoke", "aspirin",
+
+    # Lab values
+    "baseline_k", "baseline_na", "baseline_creat", "baseline_urea",
+    "baseline_hb", "baseline_hct", "baseline_ntbnp", "baseline_cys",
+    "baseline_crp", "baseline_gdf15", "baseline_hscnt", "baseline_il6",
+    "baseline_chol", "baseline_hb_a1c", "baseline_tf", "baseline_ft",
+
+    # Current medications
     "bb_dose", "arni_dose", "sglt_dose", "mra_dose", "loopd_dose",
+    "ace_dose", "arb_dose",
+
+    # Previous medications
+    "DoseBB_prev", "RASDose_prev", "DoseSpiro_prev",
+    "Loop_dose_prev", "SGLT2Dose_prev", "ARNIDose_prev",
+
+    # Visit info
+    "visit_time_days", "time_from_last_medication",
 ]
 
 
@@ -213,11 +370,15 @@ def test_alex_ui():
         "raw": {}
     }
 
+    # Mock patient data for testing
+    mock_patient_data = BASE_PATIENT_PAYLOAD.copy()
+
     return render_template(
         "results.html",
         data=mock_data,
         decision_summary=mock_decision_summary,
-        alex_guidance=mock_alex_guidance
+        alex_guidance=mock_alex_guidance,
+        patient_data=mock_patient_data
     )
 
 
@@ -254,11 +415,15 @@ def test_alex_ui_error():
         "raw": {}
     }
 
+    # Mock patient data for testing
+    mock_patient_data = BASE_PATIENT_PAYLOAD.copy()
+
     return render_template(
         "results.html",
         data=mock_data,
         decision_summary=mock_decision_summary,
-        alex_guidance=mock_alex_guidance
+        alex_guidance=mock_alex_guidance,
+        patient_data=mock_patient_data
     )
 
 
@@ -266,10 +431,33 @@ def test_alex_ui_error():
 def debug_db_check():
     """Lightweight debug endpoint returning DB connectivity and a users count.
 
-    Keep this route temporary and secure/remove it in production. It is
-    intentionally simple so it can be removed or replaced by a secured
-    health check endpoint later.
+    SECURITY: This route is restricted to specific IP addresses (localhost only
+    by default) and should be removed or moved to a proper health check endpoint
+    in production.
+
+    Access control:
+    - Only allowed IPs from ALLOWED_DEBUG_IPS config can access this route
+    - Returns 403 Forbidden for unauthorized IPs
+    - Only available when FLASK_DEBUG is True (returns 404 in production)
+
+    Returns:
+        JSON response with database status or error
     """
+    # Only available in debug mode
+    if not FLASK_DEBUG:
+        return jsonify({'error': 'Not found'}), 404
+
+    # IP whitelist check
+    client_ip = request.remote_addr
+    if client_ip not in ALLOWED_DEBUG_IPS:
+        return jsonify({
+            'ok': False,
+            'error': 'Access forbidden',
+            'client_ip': client_ip
+        }), 403
+
+    # Perform database checks
+    from sqlalchemy.exc import SQLAlchemyError
     try:
         select1 = check_connection()
         users = count_users()
@@ -280,8 +468,13 @@ def debug_db_check():
                 'users_count': users,
             }
         })
-    except Exception as exc:
-        return jsonify({'ok': False, 'error': str(exc)}), 500
+    except SQLAlchemyError as exc:
+        # Log the full error but don't expose details to client
+        app.logger.error(f"Database check failed: {exc}", exc_info=True)
+        return jsonify({
+            'ok': False,
+            'error': 'Database connection failed'
+        }), 500
 
 
 

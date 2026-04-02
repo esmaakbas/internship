@@ -16,7 +16,7 @@
             <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block sidebar position-sticky">
                 <div class="position-sticky d-flex flex-column h-100">
                     <img src="{{ url_for('static', filename='img/mobilab.png') }}" alt="Capsico Logo" class="logo mb-4">
-                    
+
                     <!-- Main navigation links -->
                     <ul class="nav flex-column mt-4">
                         <li class="nav-item">
@@ -30,13 +30,46 @@
                             </a>
                         </li>
                     </ul>
-            
-                    <!-- Footer -->
-                    <ul class="nav flex-column mt-auto mb-4">
-                        <li>
-                            <p class="text-muted small font-italic">&copy; 2026 Capsico Model</p>
-                        </li>
-                    </ul>
+
+                    <!-- Footer section with auth and copyright -->
+                    <div class="mt-auto mb-3">
+                        {% if auth_enabled %}
+                            {% if user %}
+                            <!-- Logged-in user section -->
+                            <div class="sidebar-user-section mb-3" style="background: rgba(255,255,255,0.05); border-radius: 6px; padding: 12px;">
+                                <div class="d-flex align-items-center mb-2" style="color: #fff; font-size: 0.85rem;">
+                                    <i class="fas fa-user-circle mr-2" style="font-size: 1.1rem; opacity: 0.8;"></i>
+                                    <span style="font-weight: 500;">{{ user.display_name or user.email }}</span>
+                                </div>
+                                <div class="d-flex flex-wrap" style="gap: 6px;">
+                                    <a href="/profile" class="btn btn-sm {% block nav_profile %}{% endblock %}" style="background: rgba(255,255,255,0.1); color: #ccc; border: none; font-size: 0.75rem; padding: 4px 10px;">
+                                        <i class="fas fa-id-card mr-1"></i>Profile
+                                    </a>
+                                    {% if user.role == 'admin' %}
+                                    <a href="/admin" class="btn btn-sm" style="background: rgba(255,255,255,0.1); color: #ccc; border: none; font-size: 0.75rem; padding: 4px 10px;">
+                                        <i class="fas fa-cog mr-1"></i>Admin
+                                    </a>
+                                    {% endif %}
+                                    <a href="/auth/logout" class="btn btn-sm" style="background: rgba(255,255,255,0.1); color: #ccc; border: none; font-size: 0.75rem; padding: 4px 10px;">
+                                        <i class="fas fa-sign-out-alt mr-1"></i>Logout
+                                    </a>
+                                </div>
+                            </div>
+                            {% else %}
+                            <!-- Guest section -->
+                            <div class="mb-3">
+                                <a href="/auth/login" class="btn btn-sm btn-block" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 0.8rem; padding: 8px 12px;">
+                                    <i class="fas fa-sign-in-alt mr-2"></i>Login
+                                </a>
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="mb-3 text-center" style="color: #666; font-size: 0.75rem;">
+                                <i class="fas fa-lock mr-1"></i>Auth Disabled
+                            </div>
+                        {% endif %}
+                        <p class="text-muted small font-italic mb-0 text-center">&copy; 2026 Capsico Model</p>
+                    </div>
                 </div>
             </nav>
             

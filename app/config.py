@@ -113,19 +113,105 @@ FLASK_HOST = os.getenv("FLASK_HOST", "127.0.0.1")
 ALLOWED_EXTENSIONS = {"csv"}
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
 
+def _require_env(key: str, context: str = "application") -> str:
+    """Require environment variable or fail fast with clear error message.
+
+    Args:
+        key: Environment variable name
+        context: Description for error message (e.g., "database", "Auth0")
+
+    Raises:
+        ValueError: If environment variable is missing or empty
+    """
+    val = os.getenv(key)
+    if not val:
+        raise ValueError(
+            f"Missing required environment variable: {key}\n"
+            f"This is required for {context} configuration.\n"
+            f"Please set it in your .env file or environment."
+        )
+    return val
+
+
 # Database configuration (MySQL via PyMySQL)
-DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
-DB_PORT = os.getenv("DB_PORT", "3306")
-DB_NAME = os.getenv("DB_NAME", "mobilab_app")
-DB_USER = os.getenv("DB_USER", "mobilab_user")
-DB_PASS = os.getenv("DB_PASS", "mobilab_pass")
+# SECURITY: DB credentials are REQUIRED and must be set in .env
+# The app will fail to start if these are not configured properly
+DB_HOST = os.getenv("DB_HOST", "127.0.0.1")  # OK to default to localhost
+DB_PORT = int(os.getenv("DB_PORT", "3306"))  # OK to default to standard MySQL port
+DB_NAME = _require_env("DB_NAME", "database")
+DB_USER = _require_env("DB_USER", "database")
+DB_PASS = _require_env("DB_PASS", "database")
 
 # SQLAlchemy connection string for MySQL using PyMySQL driver
 SQLALCHEMY_DATABASE_URI = (
     f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    f"?charset=utf8mb4"
 )
 SQLALCHEMY_TRACK_MODIFICATIONS = False
-SQLALCHEMY_ECHO = False
+SQLALCHEMY_ECHO = os.getenv("SQLALCHEMY_ECHO", "False").lower() in ("true", "1", "yes")
+
+# Database connection pool and timeout settings
+DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))
+DB_MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "10"))
+DB_POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+DB_POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "3600"))  # 1 hour
+DB_CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))  # seconds
+
+# Auth0 Configuration (Optional)
+# Authentication will only be enabled if Auth0 credentials are properly configured
+# Set these in your .env file with values from your Auth0 application dashboard
+def _is_auth0_configured() -> bool:
+    """Check if Auth0 is properly configured (not missing or placeholder values)."""
+    domain = os.getenv("AUTH0_DOMAIN", "")
+    client_id = os.getenv("AUTH0_CLIENT_ID", "")
+    client_secret = os.getenv("AUTH0_CLIENT_SECRET", "")
+
+    # Check if any are missing
+    if not domain or not client_id or not client_secret:
+        return False
+
+    # Check for common placeholder patterns
+    placeholders = ["your-", "your_", "example", "placeholder", "CHANGE_ME"]
+    if any(p in domain.lower() for p in placeholders):
+        return False
+    if any(p in client_id for p in placeholders):
+        return False
+    if any(p in client_secret for p in placeholders):
+        return False
+
+    return True
+
+
+AUTH0_ENABLED = _is_auth0_configured()
+
+if AUTH0_ENABLED:
+    # Auth0 is properly configured - load real values
+    AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
+    AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID")
+    AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET")
+    AUTH0_CALLBACK_URL = os.getenv("AUTH0_CALLBACK_URL", f"http://127.0.0.1:{FLASK_PORT}/auth/callback")
+    # AUTH0_AUDIENCE is only needed if you have a custom Auth0 API
+    # For Regular Web Applications without custom APIs, this can be None
+    # ID tokens use CLIENT_ID as audience, access tokens use API audience
+    AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE")  # No default - optional
+else:
+    # Auth0 not configured - set to None to prevent reference errors
+    AUTH0_DOMAIN = None
+    AUTH0_CLIENT_ID = None
+    AUTH0_CLIENT_SECRET = None
+    AUTH0_CALLBACK_URL = None
+    AUTH0_AUDIENCE = None
+
+# Session Configuration (for secure cookie-based sessions)
+# SECURITY: Session secret MUST be changed in production
+SESSION_TYPE = "filesystem"  # Store sessions on filesystem (can be changed to Redis later)
+SESSION_PERMANENT = False  # Sessions expire when browser closes
+SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to cookies
+SESSION_COOKIE_SECURE = not FLASK_DEBUG  # HTTPS only in production
+SESSION_COOKIE_SAMESITE = "Lax"  # CSRF protection
+
+# Allowed IPs for debug routes (only in development)
+ALLOWED_DEBUG_IPS = os.getenv("ALLOWED_DEBUG_IPS", "127.0.0.1,::1").split(",")
 
 
 def print_config():
