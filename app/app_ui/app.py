@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, flash, redirect, url_for
+from flask import Flask, render_template, request, flash, redirect, url_for, jsonify
 import sys
 import os
 import pandas as pd
@@ -12,8 +12,13 @@ from services.base_payload import BASE_PATIENT_PAYLOAD
 from services.decision_engine import classify_treatments
 from validators.patient_form_parser import parse_patient_form
 
+from config import FLASK_SECRET_KEY, FLASK_DEBUG, FLASK_HOST, FLASK_PORT
+
+from database import check_connection, count_users
+
+
 app = Flask(__name__)
-app.secret_key = 'capsico_inference_secret_key_2026'
+app.secret_key = FLASK_SECRET_KEY
 
 # Configure upload folder
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'inputs')
@@ -257,7 +262,29 @@ def test_alex_ui_error():
     )
 
 
+@app.route('/debug/db-check')
+def debug_db_check():
+    """Lightweight debug endpoint returning DB connectivity and a users count.
+
+    Keep this route temporary and secure/remove it in production. It is
+    intentionally simple so it can be removed or replaced by a secured
+    health check endpoint later.
+    """
+    try:
+        select1 = check_connection()
+        users = count_users()
+        return jsonify({
+            'ok': True,
+            'db': {
+                'select_1': select1,
+                'users_count': users,
+            }
+        })
+    except Exception as exc:
+        return jsonify({'ok': False, 'error': str(exc)}), 500
+
+
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8080)
+    app.run(debug=FLASK_DEBUG, host=FLASK_HOST, port=FLASK_PORT)

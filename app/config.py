@@ -17,6 +17,11 @@ try:
     if os.path.exists(env_path):
         load_dotenv(env_path)
         print(f"[Config] Loaded environment variables from: {env_path}")
+    # Also attempt to load .env from the same directory as this config (app root)
+    env_local = os.path.join(os.path.dirname(__file__), '.env')
+    if os.path.exists(env_local):
+        load_dotenv(env_local)
+        print(f"[Config] Loaded environment variables from: {env_local}")
 except ImportError:
     # python-dotenv not installed, use system environment variables only
     pass
@@ -107,6 +112,20 @@ FLASK_HOST = os.getenv("FLASK_HOST", "127.0.0.1")
 # Upload Configuration
 ALLOWED_EXTENSIONS = {"csv"}
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
+
+# Database configuration (MySQL via PyMySQL)
+DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
+DB_PORT = os.getenv("DB_PORT", "3306")
+DB_NAME = os.getenv("DB_NAME", "mobilab_app")
+DB_USER = os.getenv("DB_USER", "mobilab_user")
+DB_PASS = os.getenv("DB_PASS", "mobilab_pass")
+
+# SQLAlchemy connection string for MySQL using PyMySQL driver
+SQLALCHEMY_DATABASE_URI = (
+    f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+)
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+SQLALCHEMY_ECHO = False
 
 
 def print_config():
