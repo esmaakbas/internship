@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, flash, redirect, url_for, jsonify, g
+from flask import Flask, render_template, request, flash, redirect, url_for, jsonify, g, session
 import sys
 import os
 import pandas as pd
@@ -33,6 +33,7 @@ from config import (
 from database import (
     check_connection,
     count_users,
+    create_prediction_record,
     validate_database,
     list_users_for_admin,
     upsert_user_record_from_auth0,
@@ -43,6 +44,7 @@ from database import (
 # Import authentication module only if Auth0 is configured
 if AUTH0_ENABLED:
     import auth
+    from routes.history import history_bp
     from services.auth0_management_service import (
         create_auth0_user,
         set_auth0_user_role,
@@ -74,7 +76,9 @@ Session(app)
 # Conditionally register authentication routes
 if AUTH0_ENABLED:
     auth.register_auth_routes(app)
+    app.register_blueprint(history_bp)
     app.logger.info("Authentication enabled (Auth0 configured)")
+    app.logger.info("History routes registered")
 else:
     app.logger.warning("Authentication DISABLED - Auth0 not configured in .env")
     app.logger.warning("To enable authentication, configure AUTH0_DOMAIN, AUTH0_CLIENT_ID, and AUTH0_CLIENT_SECRET")
@@ -91,7 +95,6 @@ try:
 except Exception as exc:
     app.logger.error(f"Database validation failed: {exc}")
     app.logger.warning("App will start but database operations may fail")
-
 
 # Make auth state available in all templates
 @app.context_processor
@@ -467,13 +470,6 @@ def predict():
             user_context=_resolve_alex_user_context(),
         )
 
-        # TODO: NEXT PHASE - Save prediction to database with user_id
-        # When authenticated users make predictions, save to predictions table:
-        # user_id = g.user['id'] if g.user else None
-        # save_prediction(user_id=user_id, input_payload=payload,
-        #                 output_payload=result['data'], status='success')
-        # This will enable prediction history feature in the next phase.
-
         if not result["success"]:
             return (
                 f"<h2>Inference Error</h2><pre>{result['error']}</pre>"
@@ -481,12 +477,32 @@ def predict():
                 502,
             )
 
+        prediction_output_payload = {
+            "inference_rows": result.get("data", []),
+            "decision_summary": result.get("decision_summary"),
+            "alex_guidance": result.get("alex_guidance"),
+        }
+        prediction_id = None
+        if AUTH0_ENABLED:
+            current_user = getattr(g, "user", None)
+            if isinstance(current_user, dict) and current_user.get("id"):
+                try:
+                    prediction_id = create_prediction_record(
+                        user_id=int(current_user["id"]),
+                        input_json=payload,
+                        output_json=prediction_output_payload,
+                        model_version="plumber-v1",
+                    )
+                except SQLAlchemyError as exc:
+                    app.logger.error("Failed to persist prediction record: %s", exc, exc_info=True)
+
         return render_template(
             "results.html",
             data=result["data"],
             decision_summary=result.get("decision_summary"),
             alex_guidance=result.get("alex_guidance"),
-            patient_data=payload
+            patient_data=payload,
+            prediction_id=prediction_id,
         )
 
     # GET request - legacy backward-compatibility path (subprocess flow)
@@ -496,7 +512,7 @@ def predict():
         flash(f"Error: {result['error']}", 'danger')
         return redirect(url_for('home'))
 
-    return render_template("results.html", data=result["data"])
+    return render_template("results.html", data=result["data"], prediction_id=None)
 
 
 @app.route("/test-plumber")
@@ -525,7 +541,8 @@ def test_plumber():
         "results.html",
         data=result["data"],
         alex_guidance=result.get("alex_guidance"),
-        patient_data=payload
+        patient_data=payload,
+        prediction_id=None,
     )
 
 
@@ -667,7 +684,8 @@ def test_alex_ui():
         data=mock_data,
         decision_summary=mock_decision_summary,
         alex_guidance=mock_alex_guidance,
-        patient_data=mock_patient_data
+        patient_data=mock_patient_data,
+        prediction_id=None,
     )
 
 
@@ -712,7 +730,8 @@ def test_alex_ui_error():
         data=mock_data,
         decision_summary=mock_decision_summary,
         alex_guidance=mock_alex_guidance,
-        patient_data=mock_patient_data
+        patient_data=mock_patient_data,
+        prediction_id=None,
     )
 
 

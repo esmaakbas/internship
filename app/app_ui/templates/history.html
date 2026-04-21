@@ -1,0 +1,123 @@
+{% extends "layout.html" %}
+
+{% block title %}Prediction History - Capsico{% endblock %}
+{% block nav_history %}active{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">Prediction History</h2>
+            <p class="text-muted mb-0">Review past analyses, inspect details, and export PDF reports.</p>
+        </div>
+        <a href="/" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-redo mr-1"></i> New Analysis
+        </a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" action="{{ url_for('history.history_index') }}">
+                <div class="form-row">
+                    <div class="form-group col-md-2">
+                        <label class="small text-muted">Per Page</label>
+                        <select class="form-control form-control-sm" name="limit">
+                            <option value="10" {% if active_filters.limit == '10' %}selected{% endif %}>10</option>
+                            <option value="20" {% if active_filters.limit == '20' %}selected{% endif %}>20</option>
+                            <option value="50" {% if active_filters.limit == '50' %}selected{% endif %}>50</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label class="small text-muted">Model Version</label>
+                        <input type="text" class="form-control form-control-sm" name="model_version" value="{{ active_filters.model_version }}" placeholder="e.g. plumber-v1">
+                    </div>
+                    <div class="form-group col-md-2">
+                        <label class="small text-muted">From</label>
+                        <input type="date" class="form-control form-control-sm" name="date_from" value="{{ active_filters.date_from }}">
+                    </div>
+                    <div class="form-group col-md-2">
+                        <label class="small text-muted">To</label>
+                        <input type="date" class="form-control form-control-sm" name="date_to" value="{{ active_filters.date_to }}">
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label class="small text-muted">Search</label>
+                        <input type="text" class="form-control form-control-sm" name="search" value="{{ active_filters.search }}" placeholder="Patient ID or Prediction ID">
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end" style="gap: 8px;">
+                    <a href="{{ url_for('history.history_index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                    <button type="submit" class="btn btn-primary btn-sm">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Prediction ID</th>
+                        <th>Date</th>
+                        <th>Model</th>
+                        <th>Patient</th>
+                        <th>Summary</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if predictions %}
+                        {% for prediction in predictions %}
+                        {% set summary = prediction.output_json.get('decision_summary', {}) %}
+                        {% set primary = summary.get('primary_recommendation', {}) if summary else {} %}
+                        <tr>
+                            <td>#{{ prediction.id }}</td>
+                            <td>{{ prediction.created_at.strftime('%Y-%m-%d %H:%M') if prediction.created_at else '-' }}</td>
+                            <td>{{ prediction.model_version or '-' }}</td>
+                            <td>{{ prediction.patient_id or '-' }}</td>
+                            <td>
+                                {% if primary and primary.get('Drug') %}
+                                Recommended: <strong>{{ primary.get('Drug') }}</strong>
+                                {% else %}
+                                Result available
+                                {% endif %}
+                            </td>
+                            <td class="text-right">
+                                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('history.history_detail', prediction_id=prediction.id) }}">View</a>
+                                <form method="post" action="{{ url_for('history.generate_prediction_report', prediction_id=prediction.id) }}" style="display:inline-block;">
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm">Download PDF</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">No predictions found for current filters.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+                Showing page {{ pagination.page }} of {{ pagination.total_pages }}
+                ({{ pagination.total }} total)
+            </small>
+            <div>
+                {% if prev_page_url %}
+                <a href="{{ prev_page_url }}" class="btn btn-outline-secondary btn-sm">Previous</a>
+                {% else %}
+                <button class="btn btn-outline-secondary btn-sm" disabled>Previous</button>
+                {% endif %}
+
+                {% if next_page_url %}
+                <a href="{{ next_page_url }}" class="btn btn-outline-secondary btn-sm">Next</a>
+                {% else %}
+                <button class="btn btn-outline-secondary btn-sm" disabled>Next</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
