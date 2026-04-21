@@ -11,7 +11,7 @@ SECURITY & RELIABILITY:
 - Proper exception handling
 """
 import threading
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
@@ -174,9 +174,9 @@ def get_or_create_user(
     This is the core user synchronization function called after Auth0 login.
     It ensures every authenticated user has a corresponding row in the users table.
 
-    ROLE MANAGEMENT: Roles are managed locally in the database:
-    - Existing users: Preserve their current role
-    - New users: Default to 'user' role
+    ROLE FIELD NOTE:
+    - The users.role column is retained for schema compatibility/history.
+    - Authorization does not read role from this table in the final Auth0 model.
 
     ACTIVE STATUS: Deactivated users (is_active=False) cannot log in.
 
@@ -223,7 +223,7 @@ def get_or_create_user(
                 )
                 return user_id
             else:
-                # New user - create with default role 'user' and is_active=True
+                # New user - role is populated for schema compatibility only.
                 result = conn.execute(
                     text(
                         "INSERT INTO users "
@@ -271,5 +271,134 @@ def get_user_by_id(user_id: int) -> Optional[dict]:
                     "is_active": bool(result[5]),
                 }
             return None
+    except SQLAlchemyError:
+        raise
+
+
+def list_users_for_admin() -> List[dict]:
+    """List users for admin panel, newest first.
+
+    Role from this table is not authoritative; role display should come from Auth0.
+    """
+    engine = get_engine()
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    "SELECT id, auth0_sub, email, display_name, is_active, "
+                    "last_login_at, created_at "
+                    "FROM users "
+                    "ORDER BY created_at DESC"
+                )
+            ).fetchall()
+
+            users = []
+            for row in rows:
+                users.append(
+                    {
+                        "id": row[0],
+                        "auth0_sub": row[1],
+                        "email": row[2],
+                        "display_name": row[3],
+                        "is_active": bool(row[4]),
+                        "last_login_at": row[5],
+                        "created_at": row[6],
+                    }
+                )
+            return users
+    except SQLAlchemyError:
+        raise
+
+
+def upsert_user_record_from_auth0(
+    auth0_sub: str,
+    email: str,
+    display_name: Optional[str],
+) -> int:
+    """Create or update local user record after Auth0-side user creation.
+
+    Keeps DB as lifecycle/history store and does not use DB role for authorization.
+
+    IMPORTANT: Matches by auth0_sub ONLY (unique identity from Auth0).
+    Does NOT match by email to prevent accidentally linking wrong accounts.
+    If auth0_sub doesn't exist, creates a new record.
+    """
+    engine = get_engine()
+    try:
+        with engine.begin() as conn:
+            # Match by auth0_sub only (unique identity)
+            existing = conn.execute(
+                text("SELECT id FROM users WHERE auth0_sub = :sub LIMIT 1"),
+                {"sub": auth0_sub},
+            ).fetchone()
+
+            if existing:
+                user_id = int(existing[0])
+                conn.execute(
+                    text(
+                        "UPDATE users SET "
+                        "email = :email, "
+                        "display_name = :display_name "
+                        "WHERE id = :user_id"
+                    ),
+                    {
+                        "user_id": user_id,
+                        "email": email,
+                        "display_name": display_name,
+                    },
+                )
+                return user_id
+
+            # No existing user with this auth0_sub - create new record
+            result = conn.execute(
+                text(
+                    "INSERT INTO users "
+                    "(auth0_sub, email, display_name, role, is_active, last_login_at) "
+                    "VALUES (:sub, :email, :display_name, 'user', TRUE, NULL)"
+                ),
+                {
+                    "sub": auth0_sub,
+                    "email": email,
+                    "display_name": display_name,
+                },
+            )
+            return int(result.lastrowid)
+    except SQLAlchemyError:
+        raise
+
+
+def set_user_active_status(user_id: int, is_active: bool) -> bool:
+    """Set local user lifecycle state without deleting data."""
+    engine = get_engine()
+    try:
+        with engine.begin() as conn:
+            result = conn.execute(
+                text(
+                    "UPDATE users SET is_active = :is_active "
+                    "WHERE id = :user_id"
+                ),
+                {
+                    "user_id": user_id,
+                    "is_active": bool(is_active),
+                },
+            )
+            return result.rowcount > 0
+    except SQLAlchemyError:
+        raise
+
+
+def delete_user_by_id(user_id: int) -> bool:
+    """Delete user row from local DB.
+
+    Intended for admin-approved permanent deletion flow.
+    """
+    engine = get_engine()
+    try:
+        with engine.begin() as conn:
+            result = conn.execute(
+                text("DELETE FROM users WHERE id = :user_id"),
+                {"user_id": user_id},
+            )
+            return result.rowcount > 0
     except SQLAlchemyError:
         raise

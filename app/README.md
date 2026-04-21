@@ -2,6 +2,12 @@
 
 A Python-based application for running inference predictions using the Capsico R pipeline. This application provides both a Flask web interface and integration with an R-based prediction model for processing patient data.
 
+## Documentation
+
+- Auth0 setup: [docs/AUTH0_SETUP_GUIDE.md](docs/AUTH0_SETUP_GUIDE.md)
+- Auth0 action setup: [docs/AUTH0_ACTION_SETUP_GUIDE.md](docs/AUTH0_ACTION_SETUP_GUIDE.md)
+- Flask-Alex trust contract: [docs/ALEX_TRUST_CONTRACT.md](docs/ALEX_TRUST_CONTRACT.md)
+
 ## Features
 
 - **Web Interface**: Flask-based UI for uploading patient data and viewing predictions
@@ -63,6 +69,18 @@ R_SCRIPT_PATH=path\to\Capsico_mini_v2\step_inference_mini_both.R
 # Plumber API
 PLUMBER_API_URL=http://localhost:8000
 
+# Alex Guidance API
+ALEX_GUIDANCE_URL=http://localhost:8000/guidance/generate
+ALEX_TIMEOUT_SECONDS=30
+
+# Delegated JWT (Flask signs, Alex verifies)
+ALEX_DELEGATION_ISSUER=capsico-flask-backend
+ALEX_DELEGATION_AUDIENCE=alex-llm-service
+ALEX_DELEGATION_KEY_ID=alex-key-2026-01
+ALEX_DELEGATION_TTL_SECONDS=120
+# PEM private key (single-line env with escaped newlines)
+ALEX_DELEGATION_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+
 # Flask Configuration
 FLASK_SECRET_KEY=your_secret_key_here
 FLASK_DEBUG=True
@@ -71,6 +89,22 @@ FLASK_HOST=127.0.0.1
 ```
 
 **Note**: The application will auto-detect R installation if not specified.
+
+### Secure Flask -> Alex Flow (Production)
+
+1. Auth0 authenticates the user; Flask trusts this verified session.
+2. Flask creates a short-lived delegated JWT per Alex request.
+3. Alex verifies JWT signature/claims (`iss`, `sub`, `aud`, `exp`, `iat`, `jti`) and rejects invalid tokens.
+4. Alex stores `jti` for replay protection and rejects duplicate token IDs.
+
+To generate an RSA key pair for `ALEX_DELEGATION_PRIVATE_KEY` / Alex JWKS:
+
+```bash
+openssl genrsa -out alex_delegation_private.pem 2048
+openssl rsa -in alex_delegation_private.pem -pubout -out alex_delegation_public.pem
+```
+
+Never commit private keys or `.env` secrets.
 
 ## Directory Structure
 

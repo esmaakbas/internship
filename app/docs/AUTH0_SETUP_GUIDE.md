@@ -110,10 +110,10 @@ Auth0 requires custom setup for roles. Choose ONE method:
    ```javascript
    function (user, context, callback) {
      const namespace = 'https://mobilab.app/';
-     const assignedRoles = (user.app_metadata || {}).role || 'user';
+   const assignedRoles = (user.app_metadata || {}).role || 'user';
 
-     context.idToken[namespace + 'roles'] = assignedRoles;
-     context.accessToken[namespace + 'roles'] = assignedRoles;
+   context.idToken[namespace + 'role'] = assignedRoles;
+   context.accessToken[namespace + 'role'] = assignedRoles;
 
      callback(null, user, context);
    }
@@ -173,7 +173,7 @@ After successful login, verify:
    - [ ] User record exists in database
    - [ ] auth0_sub field populated
    - [ ] email, display_name correct
-   - [ ] role field matches Auth0 configuration
+   - [ ] role-based behavior follows Auth0 claim (DB role is not used for authorization)
    - [ ] last_login_at timestamp recent
 
 2. **User Record Updates:**
@@ -211,28 +211,114 @@ Test with both users:
    - [ ] App handles gracefully without crashes
 
 # =============================================================================
-# STEP 5: TECHNICAL VALIDATION
+# STEP 5: ADMIN PANEL - AUTH0 MANAGEMENT API SETUP
 # =============================================================================
 
-## 5.1 JWKS Caching Test
+The admin panel (User Management) requires a SEPARATE Machine-to-Machine (M2M)
+application in Auth0 to call the Management API. Your regular web app credentials
+CANNOT be used for this - you'll get a 403 error.
+
+## 5.1 Create M2M Application in Auth0
+
+1. Go to Auth0 Dashboard → Applications → Applications
+2. Click "Create Application"
+3. Name: "Capsico Management API" (or similar)
+4. Select "Machine to Machine Applications"
+5. Click "Create"
+
+## 5.2 Authorize for Management API
+
+After creating the M2M app, you'll be prompted to select an API:
+
+1. Select "Auth0 Management API" (shows your tenant domain)
+2. Enable these permissions (scopes):
+   - `read:users` - List and view users
+   - `create:users` - Create new users
+   - `update:users` - Update user information
+   - `delete:users` - Delete users
+   - `read:roles` - List available roles
+   - `create:role_members` - Assign roles to users
+   - `delete:role_members` - Remove roles from users
+3. Click "Authorize"
+
+## 5.3 Create Roles in Auth0
+
+The application expects two roles to exist in Auth0:
+
+1. Go to Auth0 Dashboard → User Management → Roles
+2. Create role: **admin**
+   - Name: admin
+   - Description: Administrator with full access
+3. Create role: **user**
+   - Name: user
+   - Description: Regular user
+
+## 5.4 Find Your Database Connection Name
+
+1. Go to Auth0 Dashboard → Authentication → Database
+2. Note the connection name (default is usually "Username-Password-Authentication")
+3. This is used when creating users via the admin panel
+
+## 5.5 Update .env File
+
+Add these to your .env file (NOT the web app credentials):
+
+```env
+# Auth0 Management API - M2M Application (SEPARATE from your web app)
+AUTH0_MANAGEMENT_CLIENT_ID=your_m2m_client_id_here
+AUTH0_MANAGEMENT_CLIENT_SECRET=your_m2m_client_secret_here
+
+# Database connection name from Auth0
+AUTH0_DB_CONNECTION=Username-Password-Authentication
+```
+
+## 5.6 Test Admin Panel
+
+After configuration:
+
+1. Restart Flask app
+2. Login as admin user
+3. Go to /admin/users
+4. Should see user list (no 403 error)
+5. Try adding a user - should succeed
+
+## Troubleshooting Management API Issues
+
+**Error: "Auth0 Management API authorization failed (403)"**
+- You're using the web app credentials instead of M2M credentials
+- Create a separate M2M application as described above
+- Copy the M2M Client ID and Secret to AUTH0_MANAGEMENT_CLIENT_ID/SECRET
+
+**Error: "Missing required Auth0 roles in tenant"**
+- Create "admin" and "user" roles in Auth0 Dashboard → Roles
+
+**Error: "AUTH0_DB_CONNECTION is required to create users"**
+- Set AUTH0_DB_CONNECTION in your .env file
+- Find the connection name in Auth0 → Authentication → Database
+
+# =============================================================================
+# STEP 6: TECHNICAL VALIDATION
+# =============================================================================
+
+## 6.1 JWKS Caching Test
 1. Enable DEBUG logging in Flask
 2. Login first time → should see JWKS fetch in logs
 3. Login second time → should NOT see JWKS fetch (using cache)
 4. Wait 6+ minutes → login again → should see new JWKS fetch
 
-## 5.2 Race Condition Test
+## 6.2 Race Condition Test
 1. Open 2 browser tabs
 2. Login with same user simultaneously
 3. Check database → only 1 user record exists
 4. No database errors in logs
 
-## 5.3 Concurrent Access Test
+## 6.3 Concurrent Access Test
 1. Login with different users in different browsers
 2. All should work without interference
 3. Check that user isolation works correctly
 
 # =============================================================================
-# STEP 6: TROUBLESHOOTING COMMON ISSUES
+# STEP 7: TROUBLESHOOTING COMMON ISSUES
 # =============================================================================
 
 ## Issue: "Auth0 authorization failed"
@@ -246,6 +332,7 @@ Test with both users:
 ## Issue: "User role not found in Auth0 claims"
 - Verify user has role set in app_metadata OR custom rules configured
 - Check rule is enabled and runs successfully
+- Confirm custom claim key is exactly https://mobilab.app/role
 
 ## Issue: Database connection errors during auth
 - Verify MySQL is running and accessible

@@ -100,8 +100,24 @@ PLUMBER_API_URL = os.getenv("PLUMBER_API_URL", "http://localhost:8002")
 PLUMBER_PREDICT_URL = f"{PLUMBER_API_URL}/predict"
 
 # Alex LLM Guidance API Configuration
-ALEX_GUIDANCE_URL = os.getenv("ALEX_GUIDANCE_URL", "http://localhost:8001/guidance/generate")
+ALEX_GUIDANCE_URL = os.getenv("ALEX_GUIDANCE_URL", "http://localhost:8000/guidance/generate")
 ALEX_TIMEOUT_SECONDS = int(os.getenv("ALEX_TIMEOUT_SECONDS", "30"))
+
+# Delegated JWT settings (Flask-issued token, Alex-verified token).
+ALEX_DELEGATION_ISSUER = os.getenv("ALEX_DELEGATION_ISSUER", "capsico-flask-backend")
+ALEX_DELEGATION_AUDIENCE = os.getenv("ALEX_DELEGATION_AUDIENCE", "alex-llm-service")
+# Contract lock: delegation tokens are always RS256.
+ALEX_DELEGATION_ALGORITHM = "RS256"
+ALEX_DELEGATION_PRIVATE_KEY = os.getenv("ALEX_DELEGATION_PRIVATE_KEY")
+ALEX_DELEGATION_KEY_ID = os.getenv("ALEX_DELEGATION_KEY_ID")
+ALEX_DELEGATION_ACTIVE_KID = os.getenv("ALEX_DELEGATION_ACTIVE_KID", ALEX_DELEGATION_KEY_ID or "")
+ALEX_DELEGATION_TTL_SECONDS = int(os.getenv("ALEX_DELEGATION_TTL_SECONDS", "120"))
+ALEX_SECURITY_AUDIT_LOG_ENABLED = os.getenv("ALEX_SECURITY_AUDIT_LOG_ENABLED", "true").lower() in (
+    "true",
+    "1",
+    "yes",
+)
+ALEX_SECURITY_AUDIT_HASH_SALT = os.getenv("ALEX_SECURITY_AUDIT_HASH_SALT", "flask-audit-salt")
 
 # Flask Configuration
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "capsico_inference_secret_key_2026")
@@ -194,6 +210,20 @@ if AUTH0_ENABLED:
     # For Regular Web Applications without custom APIs, this can be None
     # ID tokens use CLIENT_ID as audience, access tokens use API audience
     AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE")  # No default - optional
+    # Authoritative role claim key injected into the ID token by Auth0 Action.
+    # Keep this exactly aligned with your Auth0 Action code.
+    AUTH0_ROLE_CLAIM = os.getenv("AUTH0_ROLE_CLAIM", "https://mobilab.app/role")
+    AUTH0_ALLOWED_ROLES = {"admin", "user"}
+    # Auth0 Management API settings for admin-only user management panel.
+    AUTH0_MANAGEMENT_AUDIENCE = os.getenv(
+        "AUTH0_MANAGEMENT_AUDIENCE", f"https://{AUTH0_DOMAIN}/api/v2/"
+    )
+    AUTH0_MANAGEMENT_CLIENT_ID = os.getenv("AUTH0_MANAGEMENT_CLIENT_ID", AUTH0_CLIENT_ID)
+    AUTH0_MANAGEMENT_CLIENT_SECRET = os.getenv(
+        "AUTH0_MANAGEMENT_CLIENT_SECRET", AUTH0_CLIENT_SECRET
+    )
+    # Auth0 database connection name used when creating users.
+    AUTH0_DB_CONNECTION = os.getenv("AUTH0_DB_CONNECTION")
 else:
     # Auth0 not configured - set to None to prevent reference errors
     AUTH0_DOMAIN = None
@@ -201,6 +231,12 @@ else:
     AUTH0_CLIENT_SECRET = None
     AUTH0_CALLBACK_URL = None
     AUTH0_AUDIENCE = None
+    AUTH0_ROLE_CLAIM = None
+    AUTH0_ALLOWED_ROLES = {"admin", "user"}
+    AUTH0_MANAGEMENT_AUDIENCE = None
+    AUTH0_MANAGEMENT_CLIENT_ID = None
+    AUTH0_MANAGEMENT_CLIENT_SECRET = None
+    AUTH0_DB_CONNECTION = None
 
 # Session Configuration (for secure cookie-based sessions)
 # SECURITY: Session secret MUST be changed in production

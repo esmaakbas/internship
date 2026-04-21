@@ -4,6 +4,7 @@ import os
 import pandas as pd
 from werkzeug.utils import secure_filename
 from flask_session import Session
+from sqlalchemy.exc import SQLAlchemyError
 
 # root path ekliyoruz ki services import edilebilsin
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -25,13 +26,30 @@ from config import (
     SESSION_COOKIE_SECURE,
     SESSION_COOKIE_SAMESITE,
     AUTH0_ENABLED,
+    AUTH0_ROLE_CLAIM,
+    AUTH0_ALLOWED_ROLES,
 )
 
-from database import check_connection, count_users, validate_database
+from database import (
+    check_connection,
+    count_users,
+    validate_database,
+    list_users_for_admin,
+    upsert_user_record_from_auth0,
+    set_user_active_status,
+    delete_user_by_id,
+)
 
 # Import authentication module only if Auth0 is configured
 if AUTH0_ENABLED:
     import auth
+    from services.auth0_management_service import (
+        create_auth0_user,
+        set_auth0_user_role,
+        get_auth0_user_role,
+        delete_auth0_user,
+        Auth0ManagementError,
+    )
 
 
 app = Flask(__name__)
@@ -86,7 +104,8 @@ def inject_auth_state():
     """
     return {
         'auth_enabled': AUTH0_ENABLED,
-        'user': getattr(g, 'user', None)
+        'user': getattr(g, 'user', None),
+        'auth0_role_claim': AUTH0_ROLE_CLAIM,
     }
 
 
@@ -99,6 +118,26 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _resolve_alex_user_context():
+    """Return a usable user context for delegated Alex calls.
+
+    Production path:
+    - Require authenticated user context from `g.user`.
+
+    Local development convenience:
+    - When Auth0 is disabled and Flask is in debug mode, provide a stable
+      synthetic subject so the end-to-end demo flow can still run.
+    """
+    user_context = getattr(g, "user", None)
+    if isinstance(user_context, dict) and user_context:
+        return user_context
+
+    if FLASK_DEBUG:
+        return {"auth0_sub": "auth0|local-dev-user"}
+
+    return None
 
 
 @app.route("/")
@@ -126,13 +165,247 @@ if AUTH0_ENABLED:
     @app.route("/admin")
     @auth.admin_required
     def admin_panel():
-        """Admin-only route example - requires admin role.
+        """Admin landing route."""
+        return redirect(url_for("admin_users"))
 
-        Demonstrates:
-        - @admin_required decorator
-        - Role-based access control
+
+    @app.route("/admin/users", methods=["GET", "POST"])
+    @auth.admin_required
+    def admin_users():
+        """Admin-only user management panel.
+
+        Auth0 remains source of truth for role.
+        Local DB remains source of truth for user lifecycle state (is_active).
         """
-        return "<h1>Admin Panel</h1><p>Only admins can see this page.</p><p><a href='/'>Home</a></p>"
+        if request.method == "POST":
+            action = (request.form.get("action") or "").strip()
+
+            try:
+                if action == "create_user":
+                    email = (request.form.get("email") or "").strip().lower()
+                    display_name = (request.form.get("display_name") or "").strip()
+                    password = request.form.get("password") or ""
+                    role = (request.form.get("role") or "user").strip().lower()
+
+                    if not email or "@" not in email:
+                        raise ValueError("Valid email is required")
+                    if len(password) < 8:
+                        raise ValueError("Password must be at least 8 characters")
+                    if role not in AUTH0_ALLOWED_ROLES:
+                        raise ValueError("Invalid role selected")
+
+                    if not display_name:
+                        display_name = email.split("@")[0]
+
+                    created = create_auth0_user(
+                        email=email,
+                        password=password,
+                        display_name=display_name,
+                    )
+                    auth0_user_id = created["user_id"]
+
+                    # Set Auth0 role as authoritative role source.
+                    set_auth0_user_role(auth0_user_id, role)
+
+                    # Persist local ownership/lifecycle record.
+                    upsert_user_record_from_auth0(
+                        auth0_sub=auth0_user_id,
+                        email=created.get("email", email),
+                        display_name=created.get("display_name", display_name),
+                    )
+
+                    flash(f"User created in Auth0 and assigned role '{role}'.", "success")
+
+                elif action == "update_user":
+                    user_id_raw = (request.form.get("user_id") or "").strip()
+                    auth0_sub = (request.form.get("auth0_sub") or "").strip()
+                    role = (request.form.get("role") or "").strip().lower()
+                    is_active_raw = (request.form.get("is_active") or "").strip()
+
+                    if not user_id_raw.isdigit():
+                        raise ValueError("Invalid user ID")
+                    if is_active_raw not in {"0", "1"}:
+                        raise ValueError("Invalid lifecycle status selected")
+
+                    user_id = int(user_id_raw)
+                    next_is_active = is_active_raw == "1"
+
+                    # Check if user is modifying their own account
+                    current_user_id = g.user.get("id")
+                    is_self_modification = (current_user_id == user_id)
+
+                    # SECURITY: Block users from changing their own role
+                    role_updated = False
+                    if auth0_sub and auth0_sub.startswith("auth0|"):
+                        if role not in AUTH0_ALLOWED_ROLES:
+                            raise ValueError("Invalid role selected")
+
+                        # Check if role is actually changing
+                        current_role = get_auth0_user_role(auth0_sub)
+                        role_is_changing = (current_role != role)
+
+                        # BLOCK self-role modification
+                        if is_self_modification and role_is_changing:
+                            raise ValueError("You cannot change your own role. Ask another administrator for help.")
+
+                        # Only update role if it's not self-modification
+                        if role_is_changing:
+                            set_auth0_user_role(auth0_sub, role)
+                            role_updated = True
+
+                    # SECURITY: Block users from deactivating themselves
+                    if is_self_modification and not next_is_active:
+                        raise ValueError("You cannot deactivate your own account. Ask another administrator for help.")
+
+                    # Always update local is_active status
+                    updated = set_user_active_status(user_id, next_is_active)
+                    if not updated:
+                        raise ValueError("User not found for lifecycle update")
+
+                    # Refresh session to ensure role changes take effect immediately
+                    if role_updated and not is_self_modification:
+                        # If we changed another user's role, we don't need to do anything to our session
+                        pass
+
+                    if role_updated:
+                        flash("User role updated successfully.", "success")
+                    else:
+                        flash("User updated successfully.", "success")
+
+                elif action == "toggle_active":
+                    user_id_raw = (request.form.get("user_id") or "").strip()
+                    next_active_raw = (request.form.get("next_is_active") or "").strip()
+
+                    if not user_id_raw.isdigit():
+                        raise ValueError("Invalid user ID")
+
+                    user_id = int(user_id_raw)
+                    next_is_active = next_active_raw == "1"
+
+                    # Check if user is archiving/reactivating themselves
+                    current_user_id = g.user.get("id")
+                    is_self_modification = (current_user_id == user_id)
+
+                    updated = set_user_active_status(user_id, next_is_active)
+                    if not updated:
+                        raise ValueError("User not found for lifecycle update")
+
+                    # SECURITY: If user archived themselves, force logout
+                    if is_self_modification and not next_is_active:
+                        session.clear()
+                        flash("Your account has been archived. Contact an administrator to reactivate.", "info")
+                        return redirect(url_for("auth_login"))
+
+                    state_label = "reactivated" if next_is_active else "archived"
+                    flash(f"User {state_label} successfully.", "success")
+
+                elif action == "delete_user":
+                    user_id_raw = (request.form.get("user_id") or "").strip()
+                    auth0_sub = (request.form.get("auth0_sub") or "").strip()
+                    is_active_raw = (request.form.get("is_active") or "").strip()
+
+                    if not user_id_raw.isdigit():
+                        raise ValueError("Invalid user ID")
+                    if is_active_raw != "0":
+                        raise ValueError("Only archived users can be deleted")
+
+                    user_id = int(user_id_raw)
+
+                    # Auth0 deletion - handle gracefully
+                    auth0_deleted = False
+                    auth0_error = None
+                    if auth0_sub and auth0_sub.startswith("auth0|"):
+                        try:
+                            delete_auth0_user(auth0_sub)
+                            auth0_deleted = True
+                        except Auth0ManagementError as exc:
+                            error_msg = str(exc)
+                            # User not found in Auth0 is OK (already deleted or never existed)
+                            if "404" in error_msg or "not found" in error_msg.lower():
+                                app.logger.info(f"Auth0 user {auth0_sub} not found, continuing with local delete")
+                                auth0_deleted = True  # Treat as success
+                            else:
+                                # Network or permission error - abort to avoid inconsistent state
+                                auth0_error = error_msg
+                                app.logger.error(f"Auth0 delete failed for {auth0_sub}: {exc}")
+
+                    if auth0_error:
+                        raise ValueError(f"Failed to delete from Auth0: {auth0_error}. User not deleted.")
+
+                    # Now safe to delete from local DB
+                    deleted = delete_user_by_id(user_id)
+                    if not deleted:
+                        raise ValueError("User not found in database")
+
+                    if auth0_deleted:
+                        flash("User permanently deleted from Auth0 and database.", "success")
+                    else:
+                        flash("User permanently deleted from database (was not linked to Auth0).", "success")
+
+                else:
+                    raise ValueError("Unsupported admin action")
+
+            except (ValueError, Auth0ManagementError, SQLAlchemyError) as exc:
+                app.logger.error(f"Admin user action failed: {exc}")
+                flash(str(exc), "danger")
+            except Exception as exc:
+                app.logger.error(f"Unexpected admin user action error: {exc}", exc_info=True)
+                flash("Unexpected error while processing admin action.", "danger")
+
+            return redirect(url_for("admin_users"))
+
+        users = []
+        auth0_warning = None
+        role_lookup_failures = 0
+        try:
+            users = list_users_for_admin()
+
+            # Read role from Auth0 for each user (authoritative source).
+            auth0_token_forbidden = False
+            for user in users:
+                auth0_sub = user.get("auth0_sub")
+                if not auth0_sub:
+                    user["auth0_role"] = "unlinked"
+                    continue
+
+                # Skip local/test identities that are not valid Auth0 user IDs.
+                if not str(auth0_sub).startswith("auth0|"):
+                    user["auth0_role"] = "unlinked"
+                    continue
+
+                try:
+                    user["auth0_role"] = get_auth0_user_role(auth0_sub)
+                except Auth0ManagementError as exc:
+                    app.logger.warning(
+                        f"Auth0 role lookup failed for {auth0_sub}: {exc}"
+                    )
+                    if "Failed to get Auth0 Management API token: 403" in str(exc):
+                        auth0_token_forbidden = True
+                    user["auth0_role"] = "unavailable"
+                    role_lookup_failures += 1
+
+            if role_lookup_failures:
+                if auth0_token_forbidden:
+                    auth0_warning = (
+                        "Auth0 Management API authorization failed (403). "
+                        "Configure a Machine-to-Machine app for Management API, grant required scopes, "
+                        "and set AUTH0_MANAGEMENT_CLIENT_ID / AUTH0_MANAGEMENT_CLIENT_SECRET."
+                    )
+                else:
+                    auth0_warning = (
+                        f"Roles could not be loaded from Auth0 for {role_lookup_failures} user(s). "
+                        "Please verify Auth0 Management API scopes (read:users, read:roles)."
+                    )
+        except SQLAlchemyError as exc:
+            app.logger.error(f"Failed to load users for admin panel: {exc}", exc_info=True)
+            flash("Failed to load user records from database.", "danger")
+
+        return render_template(
+            "admin_users.html",
+            users=users,
+            auth0_warning=auth0_warning,
+            allowed_roles=sorted(AUTH0_ALLOWED_ROLES),
+        )
 else:
     # When auth is disabled, protected routes return a message
     @app.route("/profile")
@@ -147,6 +420,16 @@ else:
 
     @app.route("/admin")
     def admin_panel():
+        return (
+            "<h1>Authentication Required</h1>"
+            "<p>This feature requires authentication to be enabled.</p>"
+            "<p>Configure Auth0 credentials in your .env file to enable authentication.</p>"
+            "<p><a href='/'>Back to Home</a></p>",
+            200
+        )
+
+    @app.route("/admin/users")
+    def admin_users():
         return (
             "<h1>Authentication Required</h1>"
             "<p>This feature requires authentication to be enabled.</p>"
@@ -179,7 +462,10 @@ def predict():
         payload = BASE_PATIENT_PAYLOAD.copy()
         payload.update(overrides)
 
-        result = perform_inference(input_data=payload)
+        result = perform_inference(
+            input_data=payload,
+            user_context=_resolve_alex_user_context(),
+        )
 
         # TODO: NEXT PHASE - Save prediction to database with user_id
         # When authenticated users make predictions, save to predictions table:
@@ -223,7 +509,10 @@ def test_plumber():
     """
     payload = BASE_PATIENT_PAYLOAD.copy()
 
-    result = perform_inference(input_data=payload)
+    result = perform_inference(
+        input_data=payload,
+        user_context=_resolve_alex_user_context(),
+    )
 
     if not result["success"]:
         return (
@@ -457,7 +746,6 @@ def debug_db_check():
         }), 403
 
     # Perform database checks
-    from sqlalchemy.exc import SQLAlchemyError
     try:
         select1 = check_connection()
         users = count_users()

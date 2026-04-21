@@ -6,10 +6,23 @@ Provides a simple interface to request guidance/explanations from the external L
 
 import uuid
 import logging
+import json
+from datetime import datetime, timezone
 import requests
 from typing import Dict, Any, Optional
 
-from config import ALEX_GUIDANCE_URL, ALEX_TIMEOUT_SECONDS
+from config import (
+    ALEX_GUIDANCE_URL,
+    ALEX_SECURITY_AUDIT_LOG_ENABLED,
+    ALEX_DELEGATION_AUDIENCE,
+    ALEX_DELEGATION_ISSUER,
+    ALEX_DELEGATION_ACTIVE_KID,
+    ALEX_TIMEOUT_SECONDS,
+)
+from services.alex_delegation_service import (
+    DelegationTokenError,
+    build_alex_delegation_token,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +31,8 @@ def request_guidance(
     question: str,
     patient_variables: Dict[str, Any],
     request_id: Optional[str] = None,
-    options: Optional[Dict[str, Any]] = None
+    options: Optional[Dict[str, Any]] = None,
+    user_context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Request guidance from Alex's LLM API.
@@ -28,6 +42,7 @@ def request_guidance(
         patient_variables: Dictionary containing patient data (patient_id, age, lvef, baseline_nyha, etc.)
         request_id: Optional request identifier. Generated if not provided.
         options: Optional dictionary of LLM options (use_retrieval, temperature, max_tokens, etc.)
+        user_context: Authenticated user context from Flask request (g.user)
 
     Returns:
         Normalized response dictionary:
@@ -69,6 +84,53 @@ def request_guidance(
         "options": default_options
     }
 
+    headers = {"Content-Type": "application/json"}
+
+    try:
+        if not isinstance(user_context, dict) or not user_context:
+            raise DelegationTokenError("Authenticated user context is required")
+
+        delegated_token = build_alex_delegation_token(
+            user_context=user_context,
+            request_id=request_id,
+        )
+        headers["Authorization"] = f"Bearer {delegated_token}"
+    except DelegationTokenError as exc:
+        logger.error("Delegated token generation failed: %s", exc)
+        if ALEX_SECURITY_AUDIT_LOG_ENABLED:
+            logger.info(
+                json.dumps(
+                    {
+                        "event": "delegation_token_issue_failed",
+                        "request_id": request_id,
+                        "iss": ALEX_DELEGATION_ISSUER,
+                        "aud": ALEX_DELEGATION_AUDIENCE,
+                        "kid": ALEX_DELEGATION_ACTIVE_KID,
+                        "outcome": "deny",
+                        "reason_code": "token_generation_failed",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
+                    sort_keys=True,
+                )
+            )
+        return {
+            "ok": False,
+            "request_id": request_id,
+            "status": "error",
+            "answer": None,
+            "model": None,
+            "warnings": [],
+            "metadata": {},
+            "verification": None,
+            "rag": [],
+            "error": {
+                "code": "DELEGATION_TOKEN_ERROR",
+                "message": "Secure delegation token could not be created",
+                "details": {},
+            },
+            "raw": {},
+        }
+
     # Initialize normalized response structure
     normalized = {
         "ok": False,
@@ -92,35 +154,29 @@ def request_guidance(
             ALEX_GUIDANCE_URL,
             json=payload,
             timeout=ALEX_TIMEOUT_SECONDS,
-            headers={"Content-Type": "application/json"}
+            headers=headers,
         )
 
         # Try to parse JSON response
         try:
             response_data = response.json()
-            normalized["raw"] = response_data
         except ValueError as e:
             logger.error(f"Failed to parse JSON response: {e}")
             normalized["error"] = {
                 "code": "INVALID_JSON",
                 "message": "Response is not valid JSON",
-                "details": {"response_text": response.text[:500]}
+                "details": {}
             }
             return normalized
 
         # Handle HTTP errors
         if not (200 <= response.status_code < 300):
             logger.warning(f"Guidance API returned status {response.status_code}")
-
-            # Check if response has error envelope
-            if "error" in response_data:
-                normalized["error"] = response_data["error"]
-            else:
-                normalized["error"] = {
-                    "code": "HTTP_ERROR",
-                    "message": f"HTTP {response.status_code}",
-                    "details": response_data
-                }
+            normalized["error"] = {
+                "code": "HTTP_ERROR",
+                "message": "Guidance API request failed",
+                "details": {}
+            }
             return normalized
 
         # Extract payload from either direct response or nested job result.
@@ -154,27 +210,24 @@ def request_guidance(
         success_statuses = {"ok", "success", "completed"}
         if normalized["status"] not in success_statuses:
             logger.warning(f"API returned HTTP {response.status_code} but status={normalized['status']}")
-            # Check if response has error envelope
-            if "error" in response_data:
-                normalized["error"] = response_data["error"]
-            else:
-                normalized["error"] = {
-                    "code": "API_ERROR",
-                    "message": f"API returned status: {normalized['status']}",
-                    "details": response_data
-                }
+            normalized["error"] = {
+                "code": "API_ERROR",
+                "message": "Guidance API returned an unsuccessful status",
+                "details": {}
+            }
             return normalized
 
         if not normalized["answer"]:
             normalized["error"] = {
                 "code": "EMPTY_ANSWER",
-                "message": "API returned success status but no answer text",
-                "details": response_data
+                "message": "Guidance API returned success status but no answer text",
+                "details": {}
             }
             return normalized
 
         # True success - valid status and answer text.
         normalized["ok"] = True
+        normalized["raw"] = response_data
 
         # Log warnings if present
         if normalized["warnings"]:
@@ -197,7 +250,7 @@ def request_guidance(
         normalized["error"] = {
             "code": "CONNECTION_ERROR",
             "message": "Failed to connect to guidance API",
-            "details": {"exception": str(e)}
+            "details": {}
         }
         return normalized
 
@@ -205,8 +258,8 @@ def request_guidance(
         logger.error(f"Guidance API request failed: {e}")
         normalized["error"] = {
             "code": "REQUEST_ERROR",
-            "message": "Request failed",
-            "details": {"exception": str(e)}
+            "message": "Guidance API request failed",
+            "details": {}
         }
         return normalized
 
@@ -215,6 +268,6 @@ def request_guidance(
         normalized["error"] = {
             "code": "UNKNOWN_ERROR",
             "message": "An unexpected error occurred",
-            "details": {"exception": str(e)}
+            "details": {}
         }
         return normalized

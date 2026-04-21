@@ -36,12 +36,28 @@
         padding-bottom: 4px;
         border-bottom: 1px solid #e9ecef;
     }
+    .home-page-header h1 {
+        color: #007380;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    .home-page-header h1 i {
+        color: #007380;
+    }
+    .home-page-header p {
+        margin-bottom: 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container py-5">
-    <h2 class="text-center mb-4">Capsico Drug Treatment Inference</h2>
+    <div class="home-page-header mb-4">
+        <h1>Capsico Drug Treatment Inference</h1>
+        <p>Enter patient details, review values, and run inference.</p>
+    </div>
 
     <!-- CSV Upload (prefill only — does NOT run inference) -->
     <div class="card shadow-sm mb-4">

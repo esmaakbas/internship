@@ -9,8 +9,8 @@ This module provides:
 
 ARCHITECTURE:
 - Auth0 is used ONLY for authentication (identity verification)
-- Authorization (roles) is managed ONLY in the local database
-- New users get default role 'user'; admins are promoted manually in DB
+- Authorization role comes from verified Auth0 ID token claim
+- Local database stores user lifecycle data and enforces is_active only
 
 SECURITY FEATURES:
 - Proper JWT signature verification using Auth0's JWK
@@ -48,6 +48,8 @@ from config import (
     AUTH0_CLIENT_SECRET,
     AUTH0_CALLBACK_URL,
     AUTH0_AUDIENCE,
+    AUTH0_ROLE_CLAIM,
+    AUTH0_ALLOWED_ROLES,
 )
 from database import get_or_create_user, get_user_by_id
 
@@ -228,15 +230,58 @@ def verify_jwt(token: str, expected_audience: Optional[str] = None) -> dict:
         raise AuthError(f"Token validation failed: {exc}", 500) from exc
 
 
-# Role management is now handled locally in the database
-# Auth0 is used only for authentication (identity verification)
+def extract_auth0_role_from_claims(token_claims: dict) -> str:
+    """Extract and validate role from verified Auth0 ID token claims.
+
+    This enforces the final architecture where Auth0's signed token claim
+    is the authoritative source for authorization role.
+
+    Args:
+        token_claims: Verified ID token payload
+
+    Returns:
+        str: Normalized role (admin/user)
+
+    Raises:
+        AuthError: If role claim is missing or invalid
+    """
+    if not AUTH0_ROLE_CLAIM:
+        raise AuthError("AUTH0 role claim key is not configured", 500)
+
+    raw_role = token_claims.get(AUTH0_ROLE_CLAIM)
+
+    if raw_role is None:
+        raise AuthError(
+            f"Missing required Auth0 role claim: {AUTH0_ROLE_CLAIM}",
+            403,
+        )
+
+    # Accept either a string claim or a single-element list from Auth0 Action output.
+    if isinstance(raw_role, list):
+        if len(raw_role) != 1:
+            raise AuthError(
+                f"Invalid Auth0 role claim format for {AUTH0_ROLE_CLAIM}",
+                403,
+            )
+        role = str(raw_role[0]).strip().lower()
+    else:
+        role = str(raw_role).strip().lower()
+
+    if role not in AUTH0_ALLOWED_ROLES:
+        raise AuthError(
+            f"Invalid role '{role}' in Auth0 claim {AUTH0_ROLE_CLAIM}",
+            403,
+        )
+
+    return role
 
 
 def sync_auth0_user_to_db(userinfo: dict) -> int:
     """Synchronize Auth0 user to local database.
 
     Creates a new user or updates existing user in the `users` table.
-    Auth0 is used only for authentication - roles are managed locally in the database.
+    Authorization role is NOT persisted from DB in this flow; role authority comes
+    from the verified Auth0 ID token claim.
 
     Args:
         userinfo: User information from Auth0 (ID token claims)
@@ -286,6 +331,9 @@ def login() -> Any:
     Returns:
         Redirect response to Auth0 login page
     """
+    # Start login with a clean local session so stale auth data never leaks into a new flow.
+    session.clear()
+
     # Generate CSRF protection state
     state = secrets.token_urlsafe(32)
     session["oauth_state"] = state
@@ -305,6 +353,7 @@ def login() -> Any:
         "redirect_uri": AUTH0_CALLBACK_URL,
         "scope": "openid profile email",
         "state": state,
+        "prompt": "login",
     }
 
     # Only include audience parameter if it's configured (for custom APIs)
@@ -367,6 +416,10 @@ def callback() -> Any:
     # Clear state from session
     session.pop("oauth_state", None)
 
+    # Drop any previously authenticated local session before continuing callback processing.
+    # This prevents stale user context when this callback later fails (e.g., deactivated account).
+    session.clear()
+
     # Get authorization code
     code = request.args.get("code")
     if not code:
@@ -413,6 +466,9 @@ def callback() -> Any:
     except AuthError:
         raise
 
+    # Extract authoritative role from verified Auth0 token claims
+    auth0_role = extract_auth0_role_from_claims(userinfo)
+
     # Sync user to database (handles deactivated user check)
     user_id = sync_auth0_user_to_db(userinfo)
 
@@ -423,10 +479,16 @@ def callback() -> Any:
     session["user_id"] = user_id
     session["auth0_sub"] = userinfo["sub"]
     session["email"] = userinfo.get("email")
-    session["display_name"] = userinfo.get("name")
+    session["display_name"] = userinfo.get("name") or userinfo.get("nickname") or userinfo.get("email")
+    session["auth0_role"] = auth0_role
+    session["role_claim_key"] = AUTH0_ROLE_CLAIM
 
-    # Set session expiration (fixed 1-hour timeout)
-    session["token_expires_at"] = time.time() + 3600
+    # Set session expiration based on verified token exp when available.
+    token_exp = userinfo.get("exp")
+    if isinstance(token_exp, (int, float)):
+        session["token_expires_at"] = float(token_exp)
+    else:
+        session["token_expires_at"] = time.time() + 3600
 
     current_app.logger.info(f"User logged in: {userinfo.get('email')} (ID: {user_id})")
 
@@ -462,7 +524,8 @@ def load_user_into_g() -> None:
     It loads the user from the database based on the session and makes it
     available via `g.user` throughout the request.
 
-    SECURITY: Checks token expiration, user existence, AND user active status.
+    SECURITY: Checks token expiration, Auth0 role claim session, user existence,
+    and user active status.
 
     Sets:
         g.user (dict | None): Current user dictionary or None if not authenticated
@@ -482,6 +545,15 @@ def load_user_into_g() -> None:
             session.clear()
             return
 
+        # Role must be present from verified Auth0 ID token processing at login.
+        auth0_role = session.get("auth0_role")
+        if auth0_role not in AUTH0_ALLOWED_ROLES:
+            current_app.logger.warning(
+                f"Missing or invalid Auth0 role in session for user {user_id}; forcing re-login"
+            )
+            session.clear()
+            return
+
         try:
             user = get_user_by_id(user_id)
             if user is None:
@@ -496,7 +568,21 @@ def load_user_into_g() -> None:
                 session.clear()
                 return
 
-            g.user = user
+            # Protect against stale/mismatched session identity.
+            auth0_sub = session.get("auth0_sub")
+            if auth0_sub and user.get("auth0_sub") != auth0_sub:
+                current_app.logger.warning(
+                    f"Session Auth0 subject mismatch for user {user_id}, clearing session"
+                )
+                session.clear()
+                return
+
+            # Final runtime user context: role is authoritative from verified Auth0 claim.
+            g.user = {
+                **user,
+                "role": auth0_role,
+                "role_source": "auth0_id_token_claim",
+            }
         except Exception as exc:
             # Database error - don't clear session, set error flag
             current_app.logger.error(f"Failed to load user {user_id}: {exc}")
@@ -614,6 +700,7 @@ def register_auth_routes(app: Flask) -> None:
         try:
             return callback()
         except AuthError as exc:
+            session.clear()
             app.logger.error(f"Auth callback error: {exc.message}")
             return (
                 f"<h1>Authentication Error</h1>"

@@ -874,8 +874,17 @@
                         <strong>AI explanation unavailable</strong>
                         <p class="mb-0 mt-1" style="font-size: 0.92rem;">
                             The treatment recommendation above is based on the statistical analysis.
-                            The AI explanation service is temporarily unavailable.
+                            The AI explanation service is currently unavailable.
                         </p>
+                        {% if alex_guidance.error %}
+                        <p class="mb-0 mt-2" style="font-size: 0.86rem; color: #495057;">
+                            <strong>Reason:</strong>
+                            {{ alex_guidance.error.message if alex_guidance.error.message else "Unknown error" }}
+                            {% if alex_guidance.error.code %}
+                            ({{ alex_guidance.error.code }})
+                            {% endif %}
+                        </p>
+                        {% endif %}
                     </div>
                     {% endif %}
                 </div>

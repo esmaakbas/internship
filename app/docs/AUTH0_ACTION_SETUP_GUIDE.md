@@ -52,8 +52,10 @@ exports.onExecutePostLogin = async (event, api) => {
   // Namespace for custom claims (must start with https://)
   const namespace = 'https://mobilab.app/';
 
-  // Get role from user's app_metadata (where you configured it)
-  const role = event.user.app_metadata?.role || 'user';
+   // Read Auth0-assigned roles and normalize to a single app role.
+   // If multiple roles are assigned, admin wins over user.
+   const assignedRoles = event.authorization?.roles || [];
+   const role = assignedRoles.includes('admin') ? 'admin' : 'user';
 
   // Add role to ID token as a custom claim
   api.idToken.setCustomClaim(`${namespace}role`, role);
@@ -115,7 +117,7 @@ A) Check Action Logs:
 
 B) Verify User Metadata:
    - User Management → Users → Click your test user
-   - Check that app_metadata contains: {"role": "admin"} or {"role": "user"}
+   - Verify user has Auth0 role assignment: admin or user
 
 C) Check Flask Logs:
    - Look for: "Role claim found: admin" in your terminal
@@ -133,7 +135,18 @@ D) Common Issues:
 
 After successful configuration:
 ✓ Login works without errors
-✓ User appears in Flask 'users' table with correct role
+✓ User appears in Flask 'users' table (role in DB is not used for authorization)
 ✓ Profile page shows user information
 ✓ Admin users can access /admin route
 ✓ Regular users get 403 on /admin route
+
+# =============================================================================
+# FINAL CLAIM CONTRACT
+# =============================================================================
+
+Your Auth0 Action and Flask backend must use this exact claim key:
+
+- Claim key: https://mobilab.app/role
+- Value: "admin" or "user"
+
+Do not use https://mobilab.app/roles for backend role checks in this app.
