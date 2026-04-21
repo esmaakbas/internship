@@ -192,6 +192,13 @@
                                 <i class="fas fa-chart-line"></i> Run Inference
                             </a>
                         </li>
+                        {% if auth_enabled %}
+                        <li class="nav-item">
+                            <a class="nav-link {% block nav_history %}{% endblock %}" href="/history">
+                                <i class="fas fa-history"></i>History
+                            </a>
+                        </li>
+                        {% endif %}
                         {% if auth_enabled and user and user.role|lower == 'admin' %}
                         <li class="nav-item mt-3" style="border-top: 1px solid rgba(255,255,255,0.14); padding-top: 10px;">
                             <span style="color: rgba(255,255,255,0.58); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.5rem 1rem; display: inline-block;">Administration</span>

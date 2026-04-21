@@ -1,0 +1,108 @@
+{% extends "layout.html" %}
+
+{% block title %}Prediction #{{ prediction.id }} - Capsico{% endblock %}
+{% block nav_history %}active{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h2 class="mb-1">Prediction #{{ prediction.id }}</h2>
+            <p class="text-muted mb-0">
+                {{ prediction.created_at.strftime('%Y-%m-%d %H:%M:%S') if prediction.created_at else '-' }}
+                | Model: {{ prediction.model_version or '-' }}
+            </p>
+        </div>
+        <div class="d-flex" style="gap: 8px;">
+            <a href="{{ url_for('history.history_index') }}" class="btn btn-outline-secondary btn-sm">Back to History</a>
+            <form method="post" action="{{ url_for('history.generate_prediction_report', prediction_id=prediction.id) }}" style="display:inline-block;">
+                <button type="submit" class="btn btn-primary btn-sm">Download PDF</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header"><strong>Input Parameters</strong></div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                            {% for key, value in prediction.input_json.items() %}
+                            <tr>
+                                <th style="width: 45%;">{{ key }}</th>
+                                <td>{{ value }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header"><strong>Metadata</strong></div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Patient ID</dt>
+                        <dd class="col-sm-7">{{ prediction.patient_id or '-' }}</dd>
+
+                        <dt class="col-sm-5">Created At</dt>
+                        <dd class="col-sm-7">{{ prediction.created_at.strftime('%Y-%m-%d %H:%M:%S') if prediction.created_at else '-' }}</dd>
+
+                        <dt class="col-sm-5">Model Version</dt>
+                        <dd class="col-sm-7">{{ prediction.model_version or '-' }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% set rows = prediction.output_json.get('inference_rows', []) %}
+    <div class="card mb-3">
+        <div class="card-header"><strong>Prediction Output</strong></div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Drug</th>
+                            <th>Tau Point</th>
+                            <th>CI Low</th>
+                            <th>CI High</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if rows %}
+                            {% for row in rows %}
+                            <tr>
+                                <td>{{ row.get('Drug', '-') }}</td>
+                                <td>{{ row.get('Tau_Point', '-') }}</td>
+                                <td>{{ row.get('CI_Low', '-') }}</td>
+                                <td>{{ row.get('CI_High', '-') }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">No output rows available.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% set explanation = prediction.output_json.get('alex_guidance', {}) %}
+    <div class="card">
+        <div class="card-header"><strong>Explanation</strong></div>
+        <div class="card-body">
+            {% if explanation and explanation.get('ok') and explanation.get('answer') %}
+                <p class="mb-0" style="white-space: pre-wrap;">{{ explanation.get('answer') }}</p>
+            {% else %}
+                <p class="text-muted mb-0">No explanation available for this prediction.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

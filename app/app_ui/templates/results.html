@@ -145,7 +145,7 @@
                     {% set tier_1_drugs = decision_summary.tier_1_significant|map(attribute='Drug')|list %}
                     {% if tier_1_drugs %}
                     <div style="margin-bottom: 12px;">
-                        <div style="display: flex; align-items-start;">
+                        <div style="display: flex; align-items: flex-start;">
                             <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #28a745; margin-top: 6px; margin-right: 10px; flex-shrink: 0;"></span>
                             <div>
                                 <strong style="color: #495057; font-size: 0.95rem;">Significant benefit:</strong>
@@ -158,7 +158,7 @@
                     {% set tier_2_drugs = decision_summary.tier_2_suggestive|map(attribute='Drug')|list %}
                     {% if tier_2_drugs %}
                     <div style="margin-bottom: 12px;">
-                        <div style="display: flex; align-items-start;">
+                        <div style="display: flex; align-items: flex-start;">
                             <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ffc107; margin-top: 6px; margin-right: 10px; flex-shrink: 0;"></span>
                             <div>
                                 <strong style="color: #495057; font-size: 0.95rem;">Suggestive benefit:</strong>
@@ -171,7 +171,7 @@
                     {% set tier_3_drugs = decision_summary.tier_3_no_benefit|map(attribute='Drug')|list %}
                     {% if tier_3_drugs %}
                     <div style="margin-bottom: 12px;">
-                        <div style="display: flex; align-items-start;">
+                        <div style="display: flex; align-items: flex-start;">
                             <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #6c757d; margin-top: 6px; margin-right: 10px; flex-shrink: 0;"></span>
                             <div>
                                 <strong style="color: #495057; font-size: 0.95rem;">No supported benefit:</strong>
@@ -184,7 +184,7 @@
                     {% set tier_unknown_drugs = decision_summary.tier_unknown|map(attribute='Drug')|list %}
                     {% if tier_unknown_drugs %}
                     <div>
-                        <div style="display: flex; align-items-start;">
+                        <div style="display: flex; align-items: flex-start;">
                             <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #dee2e6; border: 1px solid #adb5bd; margin-top: 6px; margin-right: 10px; flex-shrink: 0;"></span>
                             <div>
                                 <strong style="color: #6c757d; font-size: 0.95rem;">Insufficient data:</strong>
@@ -218,7 +218,16 @@
                 <a class="nav-link" id="llm-tab" data-toggle="tab" href="#llm" role="tab" style="font-weight: 500; color: #6c757d;">LLM</a>
             </li>
         </ul>
-        <a href="/" class="btn btn-primary btn-sm mb-2" style="font-size: 0.8rem; padding: 4px 12px;"><i class="fas fa-redo mr-1"></i> New Analysis</a>
+        <div class="d-flex align-items-center mb-2" style="gap: 8px;">
+            {% if prediction_id %}
+            <form method="post" action="{{ url_for('history.generate_prediction_report', prediction_id=prediction_id) }}" class="mb-0">
+                <button type="submit" class="btn btn-outline-secondary btn-sm" style="font-size: 0.8rem; padding: 4px 12px;">
+                    <i class="fas fa-file-pdf mr-1"></i> Export as PDF
+                </button>
+            </form>
+            {% endif %}
+            <a href="/" class="btn btn-primary btn-sm" style="font-size: 0.8rem; padding: 4px 12px;"><i class="fas fa-redo mr-1"></i> New Analysis</a>
+        </div>
     </div>
 
     <div class="tab-content pt-4" id="resultTabsContent">
@@ -342,6 +351,16 @@
                                 <a href="/" class="btn btn-sm btn-outline-primary" style="text-align: left;">
                                     <i class="fas fa-redo mr-2"></i>New Analysis
                                 </a>
+                                {% if prediction_id %}
+                                <form method="post" action="{{ url_for('history.generate_prediction_report', prediction_id=prediction_id) }}" class="mb-0">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" style="text-align: left; width: 100%;">
+                                        <i class="fas fa-file-pdf mr-2"></i>Export as PDF
+                                    </button>
+                                </form>
+                                <a href="{{ url_for('history.history_detail', prediction_id=prediction_id) }}" class="btn btn-sm btn-outline-secondary" style="text-align: left;">
+                                    <i class="fas fa-folder-open mr-2"></i>View Saved Result
+                                </a>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="col-md-4">
