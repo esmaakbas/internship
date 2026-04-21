@@ -1,0 +1,1206 @@
+{% extends "layout.html" %}
+
+{% block title %}Admin Users - Capsico Inference{% endblock %}
+{% block nav_admin_users %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+    .users-shell {
+        max-width: 1140px;
+        margin: 0 auto;
+    }
+
+    .users-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+    }
+
+    /* Search and Filter Bar */
+    .filter-toggle-btn {
+        background: white;
+        border: 1px solid #d1d5db;
+        color: #6b7280;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .filter-toggle-btn:hover {
+        background: #f9fafb;
+        border-color: #9ca3af;
+    }
+
+    .filter-toggle-btn.active {
+        background: #0090A5;
+        border-color: #0090A5;
+        color: white;
+    }
+
+    .filter-bar {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 16px;
+        margin-bottom: 20px;
+        display: none;
+    }
+
+    .filter-bar.show {
+        display: block;
+    }
+
+    .filter-bar .form-control,
+    .filter-bar .input-group-text {
+        border-radius: 6px;
+        border-color: #d1d5db;
+        height: 38px;
+        font-size: 14px;
+    }
+
+    .filter-bar .form-control:focus {
+        border-color: #0090A5;
+        box-shadow: 0 0 0 3px rgba(0, 144, 165, 0.1);
+        outline: none;
+    }
+
+    .filter-bar .input-group-text {
+        background: #f9fafb;
+        border-right: none;
+        color: #6b7280;
+    }
+
+    .filter-bar .form-control.search-input {
+        border-left: none;
+    }
+
+    .filter-bar select.form-control {
+        cursor: pointer;
+        background: white;
+    }
+
+    .clear-filters-btn {
+        height: 38px;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 14px;
+        color: #6b7280;
+        border-color: #d1d5db;
+        background: white;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .clear-filters-btn:hover {
+        background: #f9fafb;
+        border-color: #9ca3af;
+        color: #374151;
+    }
+
+    /* Table Styling */
+    .users-table thead th {
+        border-top: none;
+        border-bottom: 1px solid #e5e7eb;
+        color: #6b7280;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+        padding: 12px;
+        background: #f9fafb;
+    }
+
+    .users-table tbody td {
+        vertical-align: middle;
+        border-color: #f3f4f6;
+        padding: 14px 12px;
+        font-size: 14px;
+        color: #374151;
+    }
+
+    .users-table tbody tr {
+        transition: background-color 0.15s ease;
+    }
+
+    .users-table tbody tr:hover {
+        background-color: #f9fafb;
+    }
+
+    /* Action Buttons */
+    .mini-icon-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        border: 1px solid;
+        background: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .mini-icon-btn:hover {
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .mini-icon-btn-edit {
+        color: #0090A5;
+        border-color: #d1d5db;
+    }
+
+    .mini-icon-btn-edit:hover {
+        background: #f0f9fa;
+        border-color: #0090A5;
+    }
+
+    .mini-icon-btn-archive {
+        color: #d97706;
+        border-color: #d1d5db;
+    }
+
+    .mini-icon-btn-archive:hover {
+        background: #fffbeb;
+        border-color: #d97706;
+    }
+
+    .mini-icon-btn-restore {
+        color: #10b981;
+        border-color: #d1d5db;
+    }
+
+    .mini-icon-btn-restore:hover {
+        background: #ecfdf5;
+        border-color: #10b981;
+    }
+
+    .mini-icon-btn-delete {
+        color: #ef4444;
+        border-color: #d1d5db;
+    }
+
+    .mini-icon-btn-delete:hover {
+        background: #fef2f2;
+        border-color: #ef4444;
+    }
+
+    .actions-inline {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+
+    /* View Toggle */
+    .users-view-toggle .btn {
+        min-width: 100px;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 13px;
+        padding: 7px 14px;
+        transition: all 0.2s ease;
+        color: #6b7280;
+        border-color: #d1d5db;
+        background: white;
+    }
+
+    .users-view-toggle .btn:hover {
+        background: #f9fafb;
+        border-color: #9ca3af;
+    }
+
+    .users-view-toggle .btn.active {
+        background: #0090A5;
+        border-color: #0090A5;
+        color: white;
+    }
+
+    /* Status Pills */
+    .status-pill {
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+    }
+
+    .status-pill-active {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-pill-archived {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    /* User Count at Bottom */
+    .user-count-footer {
+        text-align: center;
+        padding: 12px 0;
+        margin-top: 15px;
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 500;
+        border-top: 3px solid #f3f4f6;
+        font-style: italic;
+        }
+
+    /* Pagination */
+    .pagination-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 16px 0;
+        gap: 12px;
+        border-top: 1px solid #f3f4f6;
+        margin-top: 12px;
+    }
+
+    .pagination-btn {
+        padding: 6px 12px;
+        border: 1px solid #d1d5db;
+        background: white;
+        color: #6b7280;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        background: #f9fafb;
+        border-color: #9ca3af;
+    }
+
+    .pagination-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .pagination-btn.active {
+        background: #0090A5;
+        border-color: #0090A5;
+        color: white;
+    }
+
+    .pagination-info {
+        font-size: 13px;
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    /* Role Badges */
+    .badge {
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+    }
+
+    /* Modal Improvements */
+    .modal-content {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Fix confirmation modal appearing behind edit modal */
+    #confirmActionModal {
+        z-index: 1070;
+    }
+
+    #confirmActionModal .modal-backdrop {
+        z-index: 1060;
+    }
+
+    .modal-header {
+        border-bottom: 1px solid #f3f4f6;
+        padding: 20px 24px;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .modal-title {
+        font-weight: 600;
+        color: #111827;
+        font-size: 1.125rem;
+    }
+
+    .modal-body {
+        padding: 24px;
+        color: #4b5563;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .modal-footer {
+        border-top: 1px solid #f3f4f6;
+        padding: 16px 24px;
+        border-radius: 0 0 12px 12px;
+    }
+
+    .modal-footer .btn {
+        padding: 9px 20px;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 14px;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .modal-footer .btn-primary {
+        background: #0090A5;
+        border: 1px solid #0090A5;
+        color: white;
+    }
+
+    .modal-footer .btn-primary:hover {
+        background: #007a8f;
+        border-color: #007a8f;
+    }
+
+    .modal-footer .btn-outline-secondary {
+        border-color: #d1d5db;
+        color: #6b7280;
+    }
+
+    .modal-footer .btn-outline-secondary:hover {
+        background: #f3f4f6;
+        border-color: #9ca3af;
+        color: #374151;
+    }
+
+    /* Form Controls in Modals */
+    .modal .form-control {
+        border-radius: 6px;
+        border-color: #d1d5db;
+        padding: 9px 12px;
+        font-size: 14px;
+        height: auto;
+        line-height: 1.5;
+    }
+
+    .modal select.form-control {
+        height: 38px;
+        padding: 8px 12px;
+    }
+
+    .modal .form-control:focus {
+        border-color: #0090A5;
+        box-shadow: 0 0 0 3px rgba(0, 144, 165, 0.1);
+        outline: none;
+    }
+
+    .modal .form-control:disabled {
+        background: #f9fafb;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .modal label {
+        font-weight: 500;
+        color: #374151;
+        font-size: 14px;
+        margin-bottom: 6px;
+    }
+
+    /* Alert boxes in modals */
+    .modal .alert {
+        border-radius: 8px;
+        border: none;
+        padding: 12px 14px;
+        font-size: 14px;
+        display: block;
+        text-align: left;
+    }
+
+    .modal .alert i {
+        margin-right: 12px;
+    }
+
+    .modal .alert-info {
+        background: #eff6ff;
+        color: #1e40af;
+    }
+
+    .modal .alert-warning {
+        background: #fffbeb;
+        color: #92400e;
+    }
+
+    /* Add User Button */
+    .add-user-btn {
+        background: #0090A5;
+        color: white;
+        border: 1px solid #0090A5;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 14px;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .add-user-btn:hover {
+        background: #007a8f;
+        border-color: #007a8f;
+        color: white;
+        text-decoration: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5 users-shell">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-2" style="color:#007380; font-weight: 600;">User Management</h1>
+            <p class="mb-0" style="color: #6b7280; font-size: 14px;">Create, manage, and monitor user accounts.</p>
+        </div>
+        <button type="button" class="btn mt-3 mt-md-0 add-user-btn" data-toggle="modal" data-target="#addUserModal">
+            <i class="fas fa-user-plus"></i>
+            <span>Add User</span>
+        </button>
+    </div>
+
+    {% if auth0_warning %}
+    <div class="alert alert-warning" role="alert">
+        {{ auth0_warning }}
+    </div>
+    {% endif %}
+
+    <div class="users-card">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" id="filterToggleBtn" class="filter-toggle-btn">
+                        <i class="fas fa-filter"></i>
+                        <span>Filters</span>
+                    </button>
+                </div>
+                <div class="users-view-toggle btn-group" role="group">
+                    <button type="button" id="showActiveBtn" class="btn btn-sm btn-outline-secondary active">Active</button>
+                    <button type="button" id="showArchivedBtn" class="btn btn-sm btn-outline-secondary">Archived</button>
+                </div>
+            </div>
+
+            <!-- Collapsible Filter Bar -->
+            <div class="filter-bar" id="filterBar">
+                <div class="row align-items-end">
+                    <div class="col-lg-4 col-md-6 mb-3 mb-lg-0">
+                        <label class="text-muted small mb-1">Search</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                            </div>
+                            <input type="text" id="searchInput" class="form-control search-input" placeholder="Name or email...">
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-6 col-6 mb-3 mb-lg-0">
+                        <label class="text-muted small mb-1">Role</label>
+                        <select id="roleFilter" class="form-control">
+                            <option value="">All</option>
+                            <option value="admin">Admin</option>
+                            <option value="user">User</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-3 col-md-6 col-6 mb-3 mb-lg-0">
+                        <label class="text-muted small mb-1">Last Login</label>
+                        <select id="lastLoginFilter" class="form-control">
+                            <option value="">Any time</option>
+                            <option value="hour">Last Hour</option>
+                            <option value="today">Today</option>
+                            <option value="week">Last Week</option>
+                            <option value="never">Never</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <button type="button" id="clearFilters" class="btn btn-outline-secondary btn-block clear-filters-btn">
+                            <i class="fas fa-times mr-2"></i>Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table users-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activeUsersTbody">
+                        {% set ns = namespace(has_active=false) %}
+                        {% for row in users if row.is_active %}
+                        {% set ns.has_active = true %}
+                        <tr data-last-login="{{ row.last_login_at or '-' }}">
+                            <td>{{ row.display_name or '-' }}</td>
+                            <td>{{ row.email }}</td>
+                            <td>
+                                {% if row.auth0_role == 'admin' %}
+                                <span class="badge" style="background:#E73C0D; color:white;">Admin</span>
+                                {% elif row.auth0_role == 'user' %}
+                                <span class="badge" style="background:#0090A5; color:white;">User</span>
+                                {% else %}
+                                <span class="badge badge-secondary">{{ row.auth0_role }}</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="status-pill status-pill-active">Active</span></td>
+                            <td class="text-right">
+                                <div class="actions-inline">
+                                    <button type="button"
+                                            class="mini-icon-btn mini-icon-btn-edit"
+                                            data-toggle="modal"
+                                            data-target="#editUserModal"
+                                            data-user-id="{{ row.id }}"
+                                            data-display-name="{{ row.display_name or '' }}"
+                                            data-email="{{ row.email }}"
+                                            data-auth0-sub="{{ row.auth0_sub or '' }}"
+                                            data-auth0-role="{{ row.auth0_role }}"
+                                            data-is-linked="{{ 'true' if row.auth0_sub and row.auth0_sub.startswith('auth0|') else 'false' }}"
+                                            data-is-active="1"
+                                            data-created-at="{{ row.created_at or '-' }}"
+                                            data-last-login="{{ row.last_login_at or '-' }}"
+                                            data-is-self="{{ 'true' if user and user.id == row.id else 'false' }}"
+                                            title="Edit user">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    <form method="post" action="{{ url_for('admin_users') }}" class="d-inline js-confirm-form" data-confirm-message="Archive this user?">
+                                        <input type="hidden" name="action" value="toggle_active">
+                                        <input type="hidden" name="user_id" value="{{ row.id }}">
+                                        <input type="hidden" name="next_is_active" value="0">
+                                        <button type="submit" class="mini-icon-btn mini-icon-btn-archive" title="Archive user">
+                                            <i class="fas fa-archive"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not ns.has_active %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No active users found.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+
+                    <tbody id="archivedUsersTbody" style="display:none;">
+                        {% set ns2 = namespace(has_archived=false) %}
+                        {% for row in users if not row.is_active %}
+                        {% set ns2.has_archived = true %}
+                        <tr data-last-login="{{ row.last_login_at or '-' }}">
+                            <td>{{ row.display_name or '-' }}</td>
+                            <td>{{ row.email }}</td>
+                            <td>
+                                {% if row.auth0_role == 'admin' %}
+                                <span class="badge" style="background:#E73C0D; color:white;">Admin</span>
+                                {% elif row.auth0_role == 'user' %}
+                                <span class="badge" style="background:#0090A5; color:white;">User</span>
+                                {% else %}
+                                <span class="badge badge-secondary">{{ row.auth0_role }}</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="status-pill status-pill-archived">Archived</span></td>
+                            <td class="text-right">
+                                <div class="actions-inline">
+                                    <form method="post" action="{{ url_for('admin_users') }}" class="d-inline js-confirm-form" data-confirm-message="Restore this user?">
+                                        <input type="hidden" name="action" value="toggle_active">
+                                        <input type="hidden" name="user_id" value="{{ row.id }}">
+                                        <input type="hidden" name="next_is_active" value="1">
+                                        <button type="submit" class="mini-icon-btn mini-icon-btn-restore" title="Restore user">
+                                            <i class="fas fa-redo-alt"></i>
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{{ url_for('admin_users') }}" class="d-inline js-confirm-form" data-confirm-message="Delete this user permanently? This cannot be undone.">
+                                        <input type="hidden" name="action" value="delete_user">
+                                        <input type="hidden" name="user_id" value="{{ row.id }}">
+                                        <input type="hidden" name="auth0_sub" value="{{ row.auth0_sub or '' }}">
+                                        <input type="hidden" name="is_active" value="0">
+                                        <button type="submit" class="mini-icon-btn mini-icon-btn-delete" title="Delete permanently">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not ns2.has_archived %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No archived users found.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination-wrapper" id="paginationWrapper" style="display: none;">
+                <button type="button" class="pagination-btn" id="prevPageBtn" disabled>
+                    <i class="fas fa-chevron-left"></i>
+                    <span>Previous</span>
+                </button>
+                <span class="pagination-info" id="paginationInfo">Page 1 of 1</span>
+                <button type="button" class="pagination-btn" id="nextPageBtn" disabled>
+                    <span>Next</span>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+
+            <!-- User Count Footer -->
+            <div class="user-count-footer" id="userCountFooter">
+                Showing <span id="visibleCount">0</span> of <span id="totalCount">0</span> users
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmActionModal" tabindex="-1" role="dialog" aria-labelledby="confirmActionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmActionModalLabel">Confirm Action</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="confirmActionMessage">
+                Are you sure you want to proceed?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmActionBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addUserModal" tabindex="-1" role="dialog" aria-labelledby="addUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addUserModalLabel"><i class="fas fa-user-plus mr-2"></i>Add User</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" action="{{ url_for('admin_users') }}" id="addUserForm">
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="create_user">
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Email</label>
+                            <input name="email" type="email" class="form-control" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Display Name</label>
+                            <input name="display_name" type="text" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-7">
+                            <label>Temporary Password</label>
+                            <input name="password" type="password" class="form-control" minlength="8" required>
+                        </div>
+                        <div class="form-group col-md-5">
+                            <label>Role</label>
+                            <select name="role" class="form-control" required>
+                                {% for role in allowed_roles %}
+                                <option value="{{ role }}" {% if role == 'user' %}selected{% endif %}>{{ role|capitalize }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmAddUserModal" tabindex="-1" role="dialog" aria-labelledby="confirmAddUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmAddUserModalLabel">Confirm New User</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Please confirm user details before creation:</p>
+                <ul class="mb-0">
+                    <li><strong>Email:</strong> <span id="confirmAddEmail"></span></li>
+                    <li><strong>Display Name:</strong> <span id="confirmAddName"></span></li>
+                    <li><strong>Role:</strong> <span id="confirmAddRole"></span></li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" id="confirmAddBackBtn">Back</button>
+                <button type="button" class="btn btn-primary" id="confirmAddUserBtn">Confirm & Create</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editUserModal" tabindex="-1" role="dialog" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editUserModalLabel"><i class="fas fa-user-pen mr-2"></i>Edit User</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" action="{{ url_for('admin_users') }}" class="js-confirm-form" data-confirm-message="Save changes for this user?">
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="update_user">
+                    <input type="hidden" name="user_id" id="edit_user_id">
+                    <input type="hidden" name="auth0_sub" id="edit_auth0_sub">
+
+                    <div id="edit_self_warning" class="alert alert-info mb-3" style="display:none;">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <strong>Note:</strong> You cannot change your own role or status. Ask another administrator for assistance.
+                    </div>
+
+                    <div id="edit_unlinked_warning" class="alert alert-warning mb-3" style="display:none;">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        This user is not linked to Auth0. Role changes will not take effect until the user is linked to an Auth0 account.
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Display Name</label>
+                            <input id="edit_display_name" type="text" class="form-control" readonly>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Email</label>
+                            <input id="edit_email" type="text" class="form-control" readonly>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Auth0 User ID</label>
+                        <input id="edit_auth0_sub_view" type="text" class="form-control" readonly>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Role</label>
+                            <select name="role" id="edit_role" class="form-control" required>
+                                {% for role in allowed_roles %}
+                                <option value="{{ role }}">{{ role|capitalize }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Status</label>
+                            <select name="is_active" id="edit_is_active" class="form-control" required>
+                                <option value="1">Active</option>
+                                <option value="0">Archived</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Created</label>
+                            <input id="edit_created_at" type="text" class="form-control" readonly>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Last Login</label>
+                            <input id="edit_last_login" type="text" class="form-control" readonly>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var showActiveBtn = document.getElementById('showActiveBtn');
+    var showArchivedBtn = document.getElementById('showArchivedBtn');
+    var activeBody = document.getElementById('activeUsersTbody');
+    var archivedBody = document.getElementById('archivedUsersTbody');
+    var searchInput = document.getElementById('searchInput');
+    var roleFilter = document.getElementById('roleFilter');
+    var lastLoginFilter = document.getElementById('lastLoginFilter');
+    var clearFiltersBtn = document.getElementById('clearFilters');
+    var filterToggleBtn = document.getElementById('filterToggleBtn');
+    var filterBar = document.getElementById('filterBar');
+    var visibleCountSpan = document.getElementById('visibleCount');
+    var totalCountSpan = document.getElementById('totalCount');
+    var paginationWrapper = document.getElementById('paginationWrapper');
+    var prevPageBtn = document.getElementById('prevPageBtn');
+    var nextPageBtn = document.getElementById('nextPageBtn');
+    var paginationInfo = document.getElementById('paginationInfo');
+
+    var currentView = 'active'; // Track current view
+    var currentPage = 1;
+    var itemsPerPage = 10;
+    var filteredRows = [];
+
+    // Filter toggle functionality
+    filterToggleBtn.addEventListener('click', function() {
+        filterBar.classList.toggle('show');
+        filterToggleBtn.classList.toggle('active');
+    });
+
+    function showActiveUsers() {
+        currentView = 'active';
+        activeBody.style.display = '';
+        archivedBody.style.display = 'none';
+        showActiveBtn.classList.add('active');
+        showArchivedBtn.classList.remove('active');
+        currentPage = 1;
+        applyFilters();
+    }
+
+    function showArchivedUsers() {
+        currentView = 'archived';
+        activeBody.style.display = 'none';
+        archivedBody.style.display = '';
+        showActiveBtn.classList.remove('active');
+        showArchivedBtn.classList.add('active');
+        currentPage = 1;
+        applyFilters();
+    }
+
+    function parseLastLogin(lastLoginStr) {
+        if (!lastLoginStr || lastLoginStr === '-' || lastLoginStr.includes('never')) {
+            return null;
+        }
+        const date = new Date(lastLoginStr);
+        return isNaN(date.getTime()) ? null : date;
+    }
+
+    function matchesLastLoginFilter(lastLoginStr, filterValue) {
+        if (!filterValue) return true;
+
+        const lastLogin = parseLastLogin(lastLoginStr);
+        const now = new Date();
+
+        switch (filterValue) {
+            case 'never':
+                return lastLogin === null;
+            case 'hour':
+                if (!lastLogin) return false;
+                return (now - lastLogin) <= (60 * 60 * 1000);
+            case 'today':
+                if (!lastLogin) return false;
+                return lastLogin.toDateString() === now.toDateString();
+            case 'week':
+                if (!lastLogin) return false;
+                return (now - lastLogin) <= (7 * 24 * 60 * 60 * 1000);
+            default:
+                return true;
+        }
+    }
+
+    function applyFilters() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        const roleValue = roleFilter.value.toLowerCase();
+        const lastLoginValue = lastLoginFilter.value;
+
+        const tbody = currentView === 'active' ? activeBody : archivedBody;
+        const rows = tbody.querySelectorAll('tr');
+
+        filteredRows = [];
+        let totalCount = 0;
+
+        // Hide all rows first
+        rows.forEach(function(row) {
+            // Skip the "no users" placeholder row
+            if (row.cells.length === 1 && row.cells[0].colSpan > 1) {
+                row.style.display = 'none';
+                return;
+            }
+
+            totalCount++;
+
+            const name = (row.cells[0]?.textContent || '').toLowerCase();
+            const email = (row.cells[1]?.textContent || '').toLowerCase();
+            const roleText = (row.cells[2]?.textContent || '').toLowerCase();
+
+            const roleMatch = !roleValue || roleText.includes(roleValue);
+            const searchMatch = !searchTerm || name.includes(searchTerm) || email.includes(searchTerm);
+
+            const lastLoginData = row.getAttribute('data-last-login') ||
+                                 (row.querySelector('[data-last-login]')?.getAttribute('data-last-login'));
+            const lastLoginMatch = matchesLastLoginFilter(lastLoginData, lastLoginValue);
+
+            if (roleMatch && searchMatch && lastLoginMatch) {
+                filteredRows.push(row);
+            }
+
+            // Hide all rows initially
+            row.style.display = 'none';
+        });
+
+        // Calculate pagination
+        const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+        const startIdx = (currentPage - 1) * itemsPerPage;
+        const endIdx = startIdx + itemsPerPage;
+
+        // Show only rows for current page
+        for (let i = 0; i < filteredRows.length; i++) {
+            if (i >= startIdx && i < endIdx) {
+                filteredRows[i].style.display = '';
+            } else {
+                filteredRows[i].style.display = 'none';
+            }
+        }
+
+        // Update pagination controls
+        if (filteredRows.length > itemsPerPage) {
+            paginationWrapper.style.display = 'flex';
+            paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+            prevPageBtn.disabled = currentPage === 1;
+            nextPageBtn.disabled = currentPage === totalPages;
+        } else {
+            paginationWrapper.style.display = 'none';
+        }
+
+        // Update counts
+        const visibleOnPage = Math.min(endIdx, filteredRows.length) - startIdx;
+        visibleCountSpan.textContent = filteredRows.length;
+        totalCountSpan.textContent = totalCount;
+
+        // Show/hide "no users" message
+        const hasVisibleRows = filteredRows.length > 0;
+        rows.forEach(function(row) {
+            if (row.cells.length === 1 && row.cells[0].colSpan > 1) {
+                row.style.display = hasVisibleRows ? 'none' : '';
+            }
+        });
+    }
+
+    function clearFilters() {
+        searchInput.value = '';
+        roleFilter.value = '';
+        lastLoginFilter.value = '';
+        currentPage = 1;
+        applyFilters();
+    }
+
+    function goToPage(page) {
+        currentPage = page;
+        applyFilters();
+    }
+
+    showActiveBtn.addEventListener('click', showActiveUsers);
+    showArchivedBtn.addEventListener('click', showArchivedUsers);
+    searchInput.addEventListener('input', function() {
+        currentPage = 1;
+        applyFilters();
+    });
+    roleFilter.addEventListener('change', function() {
+        currentPage = 1;
+        applyFilters();
+    });
+    lastLoginFilter.addEventListener('change', function() {
+        currentPage = 1;
+        applyFilters();
+    });
+    clearFiltersBtn.addEventListener('click', clearFilters);
+
+    prevPageBtn.addEventListener('click', function() {
+        if (currentPage > 1) {
+            goToPage(currentPage - 1);
+        }
+    });
+
+    nextPageBtn.addEventListener('click', function() {
+        const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+        if (currentPage < totalPages) {
+            goToPage(currentPage + 1);
+        }
+    });
+
+    // Initialize count
+    applyFilters();
+
+    $('#editUserModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+
+        $('#edit_user_id').val(button.data('user-id'));
+        $('#edit_auth0_sub').val(button.data('auth0-sub'));
+        $('#edit_display_name').val(button.data('display-name'));
+        $('#edit_email').val(button.data('email'));
+        $('#edit_auth0_sub_view').val(button.data('auth0-sub') || '(not linked)');
+        $('#edit_created_at').val(button.data('created-at'));
+        $('#edit_last_login').val(button.data('last-login'));
+
+        var role = (button.data('auth0-role') || '').toString().toLowerCase();
+        if (role !== 'admin' && role !== 'user') {
+            role = 'user';
+        }
+        $('#edit_role').val(role);
+
+        var isActive = String(button.data('is-active')) === '1';
+        $('#edit_is_active').val(isActive ? '1' : '0');
+
+        // Check if user is editing themselves
+        var isSelf = button.data('is-self') === true || button.data('is-self') === 'true';
+        var roleSelect = $('#edit_role');
+        var statusSelect = $('#edit_is_active');
+        var selfWarning = $('#edit_self_warning');
+        var unlinkedWarning = $('#edit_unlinked_warning');
+
+        // Handle self-editing restrictions
+        if (isSelf) {
+            roleSelect.prop('disabled', true);
+            statusSelect.prop('disabled', true);
+            selfWarning.show();
+        } else {
+            roleSelect.prop('disabled', false);
+            statusSelect.prop('disabled', false);
+            selfWarning.hide();
+        }
+
+        // Handle unlinked users - show warning and disable role editing
+        var isLinked = button.data('is-linked') === true || button.data('is-linked') === 'true';
+
+        if (!isSelf && isLinked) {
+            if (roleSelect.prop('disabled')) {
+                roleSelect.prop('disabled', false);
+            }
+            unlinkedWarning.hide();
+        } else if (!isSelf && !isLinked) {
+            roleSelect.prop('disabled', true);
+            unlinkedWarning.html('<i class="fas fa-exclamation-triangle mr-2"></i>This user is not linked to Auth0. Role changes will not take effect until the user is linked to an Auth0 account.');
+            unlinkedWarning.show();
+        }
+    });
+
+    // Re-enable disabled selects before form submit so values are included
+    $('#editUserModal form').on('submit', function () {
+        $(this).find('select:disabled').prop('disabled', false);
+    });
+
+    var addUserForm = document.getElementById('addUserForm');
+    var confirmAddUserBtn = document.getElementById('confirmAddUserBtn');
+    var confirmAddBackBtn = document.getElementById('confirmAddBackBtn');
+    var pendingAddSubmit = false;
+
+    addUserForm.addEventListener('submit', function (event) {
+        if (pendingAddSubmit) {
+            return;
+        }
+        event.preventDefault();
+
+        var formData = new FormData(addUserForm);
+        document.getElementById('confirmAddEmail').textContent = formData.get('email') || '-';
+        document.getElementById('confirmAddName').textContent = formData.get('display_name') || '-';
+        document.getElementById('confirmAddRole').textContent = (formData.get('role') || '-').toString();
+
+        $('#addUserModal').modal('hide');
+        $('#confirmAddUserModal').modal('show');
+    });
+
+    confirmAddUserBtn.addEventListener('click', function () {
+        pendingAddSubmit = true;
+        $('#confirmAddUserModal').modal('hide');
+        addUserForm.submit();
+    });
+
+    // Back button: return to add user form with data preserved
+    confirmAddBackBtn.addEventListener('click', function () {
+        $('#confirmAddUserModal').modal('hide');
+        $('#addUserModal').modal('show');
+    });
+
+    // Confirmation modal for all actions
+    var pendingFormSubmit = null;
+    var confirmActionBtn = document.getElementById('confirmActionBtn');
+    var confirmActionBtnDefaultText = confirmActionBtn ? confirmActionBtn.textContent : 'Confirm';
+    var confirmActionMessage = document.getElementById('confirmActionMessage');
+    var confirmActionModal = $('#confirmActionModal');
+
+    document.querySelectorAll('.js-confirm-form').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            var message = form.getAttribute('data-confirm-message') || 'Are you sure?';
+            confirmActionMessage.textContent = message;
+            pendingFormSubmit = form;
+
+            if (confirmActionBtn) {
+                confirmActionBtn.disabled = false;
+                confirmActionBtn.textContent = confirmActionBtnDefaultText;
+            }
+
+            // Fix z-index when showing confirmation over another modal
+            confirmActionModal.modal('show');
+
+            // Ensure confirmation modal is on top
+            setTimeout(function() {
+                var editModalBackdrop = $('.modal-backdrop').not('.show:last');
+                var confirmBackdrop = $('.modal-backdrop.show:last');
+                confirmBackdrop.css('z-index', 1060);
+                confirmActionModal.css('z-index', 1070);
+            }, 50);
+        });
+    });
+
+    confirmActionBtn.addEventListener('click', function () {
+        if (pendingFormSubmit) {
+            confirmActionBtn.disabled = true;
+            confirmActionBtn.textContent = 'Processing...';
+            confirmActionModal.modal('hide');
+            // Need to remove the event listener temporarily to avoid recursion
+            var tempForm = pendingFormSubmit;
+            pendingFormSubmit = null;
+            tempForm.submit();
+        }
+    });
+
+    // Clear pending form when modal is hidden
+    confirmActionModal.on('hidden.bs.modal', function () {
+        pendingFormSubmit = null;
+        if (confirmActionBtn) {
+            confirmActionBtn.disabled = false;
+            confirmActionBtn.textContent = confirmActionBtnDefaultText;
+        }
+    });
+});
+</script>
+{% endblock %}

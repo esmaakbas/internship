@@ -53,7 +53,7 @@ def _rank_result_list(result_list: list) -> list:
     return ranked + other + last
 
 
-def _get_alex_guidance(patient_payload: dict, inference_result: dict) -> dict:
+def _get_alex_guidance(patient_payload: dict, inference_result: dict, user_context: dict = None) -> dict:
     """
     Try to get LLM guidance from Alex's API.
 
@@ -65,6 +65,7 @@ def _get_alex_guidance(patient_payload: dict, inference_result: dict) -> dict:
         patient_payload: The original patient data dict sent to Plumber.
         inference_result: The successful inference result dict with structure:
                           {"success": True, "data": [...]}
+        user_context: Authenticated Flask user context (g.user) for delegation.
 
     Returns:
         Dict with guidance response or error. Structure matches the normalized
@@ -98,7 +99,8 @@ def _get_alex_guidance(patient_payload: dict, inference_result: dict) -> dict:
             question=alex_payload["question"],
             patient_variables=alex_payload["patient_variables"],
             request_id=alex_payload["request_id"],
-            options=alex_payload["options"]
+            options=alex_payload["options"],
+            user_context=user_context,
         )
 
         if guidance_response["ok"]:
@@ -134,7 +136,7 @@ def _get_alex_guidance(patient_payload: dict, inference_result: dict) -> dict:
         }
 
 
-def perform_inference(input_filename=None, input_data=None):
+def perform_inference(input_filename=None, input_data=None, user_context=None):
     """
     Business layer for inference.
     Supports two execution paths temporarily:
@@ -148,6 +150,8 @@ def perform_inference(input_filename=None, input_data=None):
         input_filename: Optional CSV filename in inputs/ folder (legacy path).
         input_data: Flat dict of patient features to send to the Plumber API
                     (new path). When provided, the Plumber path takes priority.
+        user_context: Authenticated Flask user context (g.user) used for
+                      secure delegation to Alex's service.
 
     Returns:
         {"success": True, "data": [...]} on success.
@@ -170,7 +174,7 @@ def perform_inference(input_filename=None, input_data=None):
 
             # Try to get Alex LLM guidance (non-blocking)
             # If this fails, we still return the successful inference result
-            alex_guidance = _get_alex_guidance(input_data, inference_result)
+            alex_guidance = _get_alex_guidance(input_data, inference_result, user_context=user_context)
             inference_result["alex_guidance"] = alex_guidance
 
             return inference_result

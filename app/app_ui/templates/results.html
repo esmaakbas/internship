@@ -21,6 +21,72 @@
         border-bottom: 2px solid #c0392b;
         font-weight: 600;
     }
+
+    .patient-data-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-bottom: 16px;
+    }
+
+    .patient-data-section h6 {
+        color: #495057;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .patient-data-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 0.9rem;
+    }
+
+    .patient-data-item:last-child {
+        border-bottom: none;
+    }
+
+    .patient-data-item .label {
+        color: #6c757d;
+    }
+
+    .patient-data-item .value {
+        font-weight: 500;
+        color: #1a252f;
+    }
+
+    .llm-summary-box {
+        background: linear-gradient(135deg, #f8fbff 0%, #f0f7ff 100%);
+        border: 1px solid #d9e9fb;
+        border-left: 4px solid #4a90d9;
+        border-radius: 8px;
+        padding: 16px 20px;
+    }
+
+    .recommendation-pill {
+        display: block;
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-bottom: 8px;
+    }
+
+    .recommendation-pill.significant {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .recommendation-pill.suggestive {
+        background: #fff3cd;
+        color: #856404;
+    }
 </style>
 {% endblock %}
 
@@ -34,109 +100,99 @@
     {% set conf = decision_summary.decision_confidence %}
     {% set has_recommendation = decision_summary.primary_recommendation %}
 
-    <div class="card mb-4 shadow" style="border: none; border-radius: 12px; overflow: hidden;">
-        <!-- Colored header bar -->
-        <div class="
-            {% if conf == 'high' %}bg-success
-            {% elif conf == 'moderate' %}bg-warning
-            {% elif conf == 'low' %}bg-danger
-            {% else %}bg-secondary{% endif %}"
-            style="height: 6px;"></div>
+    <div class="card mb-4" style="border-top: 4px solid #28a745; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <div class="card-body" style="padding: 28px 32px;">
+            <div class="row align-items-start">
+                <!-- Left: Drug Name & Badge -->
+                <div class="col-auto" style="min-width: 140px;">
+                    {% if has_recommendation %}
+                    <h1 style="font-size: 4rem; font-weight: 900; color: #1a252f; line-height: 1; margin: 0; letter-spacing: -1px;">
+                        {{ decision_summary.primary_recommendation.Drug }}
+                    </h1>
+                    <span class="badge
+                        {% if conf == 'high' %}badge-success
+                        {% elif conf == 'moderate' %}badge-warning text-dark
+                        {% elif conf == 'low' %}badge-danger
+                        {% else %}badge-secondary{% endif %}"
+                        style="font-size: 0.7rem; padding: 5px 12px; font-weight: 600; text-transform: uppercase; margin-top: 8px;">
+                        {{ conf }} CONFIDENCE
+                    </span>
+                    {% else %}
+                    <h3 style="font-size: 1.5rem; font-weight: 600; color: #6c757d; margin: 0;">
+                        No Clear Recommendation
+                    </h3>
+                    {% endif %}
+                </div>
 
-        <div class="card-body py-4 px-4">
-            <!-- Main Decision Row -->
-            <div class="row">
-                <!-- Left: The Decision -->
-                <div class="col-lg-7 mb-3 mb-lg-0">
-                    <div class="d-flex align-items-start">
-                        <!-- Drug Name (large) -->
-                        <div class="mr-4">
-                            {% if has_recommendation %}
-                            <div style="font-size: 3rem; font-weight: 800; color: #1a252f; line-height: 1;">
-                                {{ decision_summary.primary_recommendation.Drug }}
-                            </div>
-                            <div class="mt-1">
-                                <span class="badge
-                                    {% if conf == 'high' %}badge-success
-                                    {% elif conf == 'moderate' %}badge-warning text-dark
-                                    {% elif conf == 'low' %}badge-danger
-                                    {% else %}badge-secondary{% endif %}"
-                                    style="font-size: 0.75rem; padding: 4px 10px; font-weight: 600;">
-                                    {{ conf|upper }} CONFIDENCE
-                                </span>
-                            </div>
-                            {% else %}
-                            <div style="font-size: 1.8rem; font-weight: 600; color: #7f8c8d;">
-                                No Clear Recommendation
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Clinical Message -->
-                        <div class="flex-grow-1 pt-1">
-                            <p class="mb-2" style="font-size: 1.1rem; color: #2c3e50; font-weight: 500;">
-                                {{ decision_summary.clinical_message }}
-                            </p>
-                            {% if decision_summary.decision_reason %}
-                            <p class="mb-0" style="font-size: 0.88rem; color: #666;">
-                                <em>{{ decision_summary.decision_reason }}</em>
-                            </p>
-                            {% endif %}
-                        </div>
-                    </div>
+                <!-- Middle: Clinical Message -->
+                <div class="col" style="padding-left: 32px; border-left: 1px solid #dee2e6;">
+                    <p style="font-size: 1.1rem; color: #2c3e50; font-weight: 500; margin-bottom: 10px; line-height: 1.5;">
+                        {{ decision_summary.clinical_message }}
+                    </p>
+                    {% if decision_summary.decision_reason %}
+                    <p style="font-size: 0.95rem; color: #6c757d; font-style: italic; margin-bottom: 0;">
+                        {{ decision_summary.decision_reason }}
+                    </p>
+                    {% endif %}
                 </div>
 
                 <!-- Right: Treatment Classification -->
-                <div class="col-lg-5">
-                    <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
-                        Treatment Classification
+                <div class="col-auto" style="min-width: 280px; padding-left: 32px; border-left: 1px solid #dee2e6;">
+                    <h6 style="color: #6c757d; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px;">
+                        TREATMENT CLASSIFICATION
+                    </h6>
+
+                    {% set tier_1_drugs = decision_summary.tier_1_significant|map(attribute='Drug')|list %}
+                    {% if tier_1_drugs %}
+                    <div style="margin-bottom: 12px;">
+                        <div style="display: flex; align-items-start;">
+                            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #28a745; margin-top: 6px; margin-right: 10px; flex-shrink: 0;"></span>
+                            <div>
+                                <strong style="color: #495057; font-size: 0.95rem;">Significant benefit:</strong>
+                                <span style="color: #495057; font-size: 0.95rem;"> {{ tier_1_drugs|join(', ') }}</span>
+                            </div>
+                        </div>
                     </div>
-                    <table class="table table-sm mb-0" style="font-size: 0.9rem;">
-                        {% if decision_summary.tier_1_significant %}
-                        <tr>
-                            <td style="width: 20px; padding: 6px 8px; border: none;">
-                                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #27ae60;"></span>
-                            </td>
-                            <td style="padding: 6px 8px; border: none; color: #555;">
-                                <strong>Significant benefit:</strong>
-                                {{ decision_summary.tier_1_significant|map(attribute='Drug')|join(', ') }}
-                            </td>
-                        </tr>
-                        {% endif %}
-                        {% if decision_summary.tier_2_suggestive %}
-                        <tr>
-                            <td style="width: 20px; padding: 6px 8px; border: none;">
-                                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f39c12;"></span>
-                            </td>
-                            <td style="padding: 6px 8px; border: none; color: #555;">
-                                <strong>Suggestive benefit:</strong>
-                                {{ decision_summary.tier_2_suggestive|map(attribute='Drug')|join(', ') }}
-                            </td>
-                        </tr>
-                        {% endif %}
-                        {% if decision_summary.tier_3_no_benefit %}
-                        <tr>
-                            <td style="width: 20px; padding: 6px 8px; border: none;">
-                                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #bdc3c7;"></span>
-                            </td>
-                            <td style="padding: 6px 8px; border: none; color: #555;">
-                                <strong>No supported benefit:</strong>
-                                {{ decision_summary.tier_3_no_benefit|map(attribute='Drug')|join(', ') }}
-                            </td>
-                        </tr>
-                        {% endif %}
-                        {% if decision_summary.tier_unknown %}
-                        <tr>
-                            <td style="width: 20px; padding: 6px 8px; border: none;">
-                                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ecf0f1; border: 1px solid #bdc3c7;"></span>
-                            </td>
-                            <td style="padding: 6px 8px; border: none; color: #888;">
-                                <strong>Insufficient data:</strong>
-                                {{ decision_summary.tier_unknown|map(attribute='Drug')|join(', ') }}
-                            </td>
-                        </tr>
-                        {% endif %}
-                    </table>
+                    {% endif %}
+
+                    {% set tier_2_drugs = decision_summary.tier_2_suggestive|map(attribute='Drug')|list %}
+                    {% if tier_2_drugs %}
+                    <div style="margin-bottom: 12px;">
+                        <div style="display: flex; align-items-start;">
+                            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ffc107; margin-top: 6px; margin-right: 10px; flex-shrink: 0;"></span>
+                            <div>
+                                <strong style="color: #495057; font-size: 0.95rem;">Suggestive benefit:</strong>
+                                <span style="color: #495057; font-size: 0.95rem;"> {{ tier_2_drugs|join(', ') }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% set tier_3_drugs = decision_summary.tier_3_no_benefit|map(attribute='Drug')|list %}
+                    {% if tier_3_drugs %}
+                    <div style="margin-bottom: 12px;">
+                        <div style="display: flex; align-items-start;">
+                            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #6c757d; margin-top: 6px; margin-right: 10px; flex-shrink: 0;"></span>
+                            <div>
+                                <strong style="color: #495057; font-size: 0.95rem;">No supported benefit:</strong>
+                                <span style="color: #495057; font-size: 0.95rem;"> {{ tier_3_drugs|join(', ') }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% set tier_unknown_drugs = decision_summary.tier_unknown|map(attribute='Drug')|list %}
+                    {% if tier_unknown_drugs %}
+                    <div>
+                        <div style="display: flex; align-items-start;">
+                            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #dee2e6; border: 1px solid #adb5bd; margin-top: 6px; margin-right: 10px; flex-shrink: 0;"></span>
+                            <div>
+                                <strong style="color: #6c757d; font-size: 0.95rem;">Insufficient data:</strong>
+                                <span style="color: #6c757d; font-size: 0.95rem;"> {{ tier_unknown_drugs|join(', ') }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -144,71 +200,82 @@
     {% endif %}
 
     <!-- ═══════════════════════════════════════════════════════════════════════════
-         LAYER 2 & 3: TABBED CONTENT (Evidence + Explanation)
+         LAYER 2 & 3: TABBED CONTENT (Evidence + Patient Data + Explanation)
          ═══════════════════════════════════════════════════════════════════════════ -->
-    <ul class="nav nav-tabs" id="resultTabs" role="tablist" style="border-bottom: 2px solid #dee2e6;">
-        <li class="nav-item">
-            <a class="nav-link active" id="overview-tab" data-toggle="tab" href="#overview" role="tab"
-               style="font-weight: 500; color: #495057;">
-                Overview
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="comparison-tab" data-toggle="tab" href="#comparison" role="tab"
-               style="font-weight: 500; color: #495057;">
-                Model
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="explanation-tab" data-toggle="tab" href="#explanation" role="tab"
-               style="font-weight: 500; color: #6c757d;">
-                LLM 
-            </a>
-        </li>
-    </ul>
+    <!-- TABS + ACTION -->
+    <div class="d-flex justify-content-between align-items-center" style="border-bottom: 2px solid #dee2e6;">
+        <ul class="nav nav-tabs" id="resultTabs" role="tablist" style="border-bottom: none;">
+            <li class="nav-item">
+                <a class="nav-link active" id="overview-tab" data-toggle="tab" href="#overview" role="tab" style="font-weight: 500;">Overview</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="patient-tab" data-toggle="tab" href="#patient" role="tab" style="font-weight: 500;">Patient Data</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="model-tab" data-toggle="tab" href="#model" role="tab" style="font-weight: 500;">ML Model</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="llm-tab" data-toggle="tab" href="#llm" role="tab" style="font-weight: 500; color: #6c757d;">LLM</a>
+            </li>
+        </ul>
+        <a href="/" class="btn btn-primary btn-sm mb-2" style="font-size: 0.8rem; padding: 4px 12px;"><i class="fas fa-redo mr-1"></i> New Analysis</a>
+    </div>
 
     <div class="tab-content pt-4" id="resultTabsContent">
 
         <!-- ═══════════════════════════════════════════════════════════════════════
-             TAB 1: SUMMARY (decision verification, not data dump)
+             TAB 1: OVERVIEW
              ═══════════════════════════════════════════════════════════════════════ -->
         <div class="tab-pane fade show active" id="overview" role="tabpanel">
-
-            <div class="row align-items-stretch">
+            <div class="row">
+                <!-- Evidence Snapshot (Left) -->
                 <div class="col-lg-5">
-                    <!-- Recommendation Snapshot -->
                     <div class="card h-100 mb-4">
-                        <div class="card-header" style="background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
-                            <strong>Evidence Snapshot</strong>
+                        <div class="card-header" style="background: #0090A5; border-bottom: 2px solid #E73C0D; padding: 14px 18px;">
+                            <strong style="color: white; font-size: 1.05rem;">Evidence Snapshot</strong>
                         </div>
-                        <div class="card-body">
-                            <div class="mb-2" style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d;">Recommended treatment</div>
-                            <div class="mb-3" style="font-size: 1.7rem; font-weight: 700; color: #1a252f; line-height: 1.1;">
+                        <div class="card-body" style="padding: 20px;">
+                            <div class="mb-1" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d;">ML Model Recommended Treatment</div>
+                            <div class="mb-2" style="font-size: 1.6rem; font-weight: 700; color: #1a252f;">
                                 {{ decision_summary.primary_recommendation.Drug if decision_summary and decision_summary.primary_recommendation else 'None' }}
                             </div>
-
                             {% if decision_summary %}
-                            <div class="mb-3">
-                                <span class="badge
-                                    {% if conf == 'high' %}badge-success
-                                    {% elif conf == 'moderate' %}badge-warning text-dark
-                                    {% elif conf == 'low' %}badge-danger
-                                    {% else %}badge-secondary{% endif %}" style="font-size: 0.78rem; padding: 5px 10px;">
-                                    {{ conf|upper }} CONFIDENCE
-                                </span>
-                            </div>
+                            <span class="badge {% if conf == 'high' %}badge-success{% elif conf == 'moderate' %}badge-warning text-dark{% elif conf == 'low' %}badge-danger{% else %}badge-secondary{% endif %}" style="font-size: 0.75rem; padding: 5px 11px;">
+                                {{ conf|upper }} CONFIDENCE
+                            </span>
                             {% if decision_summary.decision_reason %}
-                            <p class="mb-0" style="font-size: 0.9rem; color: #55616d;">
-                                {{ decision_summary.decision_reason }}
-                            </p>
+                            <p class="mt-2 mb-3" style="font-size: 0.85rem; color: #666;">{{ decision_summary.decision_reason }}</p>
                             {% endif %}
+                            {% endif %}
+
+                            <!-- AI Summary -->
+                            {% if alex_guidance and alex_guidance.ok and alex_guidance.answer %}
+                            <div class="llm-summary-box mt-3">
+                                <div class="mb-2" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.3px; color: #4a90d9; font-weight: 600;">
+                                    <i class="fas fa-robot mr-1"></i> LLM Recommended Actions
+                                </div>
+                                <div style="font-size: 0.88rem; line-height: 1.7; color: #2c3e50;">
+                                    {% for line in (alex_guidance.answer|trim|replace('\r\n', '\n')).split('\n') %}
+                                    {% set clean_line = line|trim %}
+                                    {% if clean_line %}
+                                    <div class="mb-2">
+                                        {% if ':' in clean_line %}
+                                        <strong>{{ clean_line.split(':', 1)[0] }}:</strong> {{ clean_line.split(':', 1)[1]|trim }}
+                                        {% else %}
+                                        {{ clean_line }}
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
                             {% endif %}
                         </div>
                     </div>
                 </div>
 
+                <!-- Treatment Quick View (Right) -->
                 <div class="col-lg-7">
-                    <!-- Treatment Quick View -->
                     <div class="card h-100 mb-4">
                         <div class="card-header" style="background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
                             <strong>Treatment Quick View</strong>
@@ -217,9 +284,9 @@
                             <table class="table table-sm mb-0">
                                 <thead style="background: #f8f9fa;">
                                     <tr>
-                                        <th style="padding: 11px 14px;">Treatment</th>
-                                        <th style="padding: 11px 14px;">Effect</th>
-                                        <th style="padding: 11px 14px;">Status</th>
+                                        <th style="padding: 10px 14px;">Treatment</th>
+                                        <th style="padding: 10px 14px;">Effect</th>
+                                        <th style="padding: 10px 14px;">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -228,25 +295,16 @@
                                     {% set ci_high = row.get("CI_High") %}
                                     {% set is_recommended = decision_summary and decision_summary.primary_recommendation and row.get("Drug") == decision_summary.primary_recommendation.Drug %}
                                     <tr {% if is_recommended %}style="background: #f0fff4;"{% endif %}>
-                                        <td style="padding: 11px 14px;">
+                                        <td style="padding: 10px 14px;">
                                             <strong>{{ row.get("Drug", "-") }}</strong>
-                                            {% if is_recommended %}
-                                            <span class="badge badge-success ml-2" style="font-size: 0.65rem;">Top</span>
-                                            {% endif %}
+                                            {% if is_recommended %}<i class="fas fa-star ml-2" style="color: #28a745; font-size: 0.9rem;"></i>{% endif %}
                                         </td>
-                                        <td style="padding: 11px 14px; font-family: monospace;">
-                                            {{ "%.4f"|format(tau) if tau is not none else "-" }}
-                                        </td>
-                                        <td style="padding: 11px 14px;">
-                                            {% if tau is none %}
-                                            <span class="text-muted">Unknown</span>
-                                            {% elif tau < 0 and ci_high is not none and ci_high < 0 %}
-                                            <span class="badge badge-success">Significant</span>
-                                            {% elif tau < 0 %}
-                                            <span class="badge badge-warning text-dark">Suggestive</span>
-                                            {% else %}
-                                            <span class="badge" style="background: #e9ecef; color: #495057;">No benefit</span>
-                                            {% endif %}
+                                        <td style="padding: 10px 14px; font-family: monospace; font-size: 0.85rem;">{{ "%.4f"|format(tau) if tau is not none else "-" }}</td>
+                                        <td style="padding: 10px 14px;">
+                                            {% if tau is none %}<span class="text-muted">Unknown</span>
+                                            {% elif tau < 0 and ci_high is not none and ci_high < 0 %}<span class="badge badge-success">Significant</span>
+                                            {% elif tau < 0 %}<span class="badge badge-warning text-dark">Suggestive</span>
+                                            {% else %}<span class="badge" style="background: #e9ecef; color: #495057;">No benefit</span>{% endif %}
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -257,27 +315,363 @@
                 </div>
             </div>
 
-            <div class="card mb-4" style="background: #f8f9fa; border: 1px solid #e9ecef; margin-top: 20px;">
-                <div class="card-body d-flex flex-wrap align-items-center justify-content-between" style="gap: 12px;">
-                    <div style="font-size: 0.92rem; color: #56606b;">
-                        Overview shows only key decision signals. Use other tabs for full evidence and AI explanation details.
-                    </div>
-                    <div class="d-flex" style="gap: 10px;">
-                        <a href="#comparison" onclick="$('#comparison-tab').tab('show'); return false;" class="btn btn-outline-secondary btn-sm">
-                            Open Evidence Breakdown
-                        </a>
-                        <a href="#explanation" onclick="$('#explanation-tab').tab('show'); return false;" class="btn btn-outline-secondary btn-sm">
-                            Open AI Explanation
-                        </a>
+            <!-- Information Container -->
+            <div class="card mt-4" style="background: #f8f9fa; border: 1px solid #dee2e6;">
+                <div class="card-body" style="padding: 24px;">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6 class="mb-3" style="color: #495057; font-weight: 600;">
+                                <i class="fas fa-info-circle mr-2"></i>About This Analysis
+                            </h6>
+                            <p style="font-size: 0.88rem; color: #666; line-height: 1.6;">
+                                Treatment recommendations are based on personalized machine learning models trained on clinical trial data.
+                                All results should be reviewed by qualified healthcare professionals.
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="mb-3" style="color: #495057; font-weight: 600;">
+                                <i class="fas fa-link mr-2"></i>Quick Actions
+                            </h6>
+                            <div class="d-flex flex-column" style="gap: 8px;">
+                                <a href="#patient" onclick="document.getElementById('patient-tab').click(); return false;" class="btn btn-sm btn-outline-secondary" style="text-align: left;">
+                                    <i class="fas fa-user-injured mr-2"></i>View Patient Data
+                                </a>
+                                <a href="#model" onclick="document.getElementById('model-tab').click(); return false;" class="btn btn-sm btn-outline-secondary" style="text-align: left;">
+                                    <i class="fas fa-chart-line mr-2"></i>View Model Details
+                                </a>
+                                <a href="/" class="btn btn-sm btn-outline-primary" style="text-align: left;">
+                                    <i class="fas fa-redo mr-2"></i>New Analysis
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="mb-3" style="color: #495057; font-weight: 600;">
+                                <i class="fas fa-shield-alt mr-2"></i>Clinical Notice
+                            </h6>
+                            <p style="font-size: 0.88rem; color: #666; line-height: 1.6;">
+                                This system provides clinical decision support only. Always consult with qualified medical professionals before making treatment decisions for individual patients.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════════════════
-             TAB 2: FULL EVIDENCE (chart + detailed table)
+             TAB 2: PATIENT DATA
              ═══════════════════════════════════════════════════════════════════════ -->
-        <div class="tab-pane fade" id="comparison" role="tabpanel">
+        <div class="tab-pane fade" id="patient" role="tabpanel">
+            {% if patient_data %}
+            <div class="row">
+                <!-- Column 1: Patient Info, Vital Signs, Laboratory Values -->
+                <div class="col-md-4">
+                    <div class="patient-data-section">
+                        <h6><i class="fas fa-user mr-2"></i>Patient Information</h6>
+                        <div class="patient-data-item">
+                            <span class="label">Patient ID</span>
+                            <span class="value">{{ patient_data.get('patientid', '-') }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Age</span>
+                            <span class="value">{{ patient_data.get('age', '-') }} years</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Sex</span>
+                            <span class="value">{{ 'Female' if patient_data.get('sex') == 0 else 'Male' }}</span>
+                        </div>
+                    </div>
+
+                    <div class="patient-data-section">
+                        <h6><i class="fas fa-heartbeat mr-2"></i>Vital Signs</h6>
+                        <div class="patient-data-item">
+                            <span class="label">Blood Pressure</span>
+                            <span class="value">{{ patient_data.get('baseline_sbp', '-') }}/{{ patient_data.get('baseline_dpb', '-') }} mmHg</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Heart Rate</span>
+                            <span class="value">{{ patient_data.get('baseline_hr', '-') }} bpm</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Body Weight</span>
+                            <span class="value">{{ patient_data.get('baseline_bw', '-') }} kg</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">BMI</span>
+                            <span class="value">{{ patient_data.get('baseline_bmi', '-') }} kg/m²</span>
+                        </div>
+                    </div>
+
+                    <div class="patient-data-section">
+                        <h6><i class="fas fa-vial mr-2"></i>Laboratory Values</h6>
+                        <div class="patient-data-item">
+                            <span class="label">Potassium</span>
+                            <span class="value">{{ patient_data.get('baseline_k', '-') }} mmol/L</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Sodium</span>
+                            <span class="value">{{ patient_data.get('baseline_na', '-') }} mmol/L</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Creatinine</span>
+                            <span class="value">{{ patient_data.get('baseline_creat', '-') }} mg/dL</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Hemoglobin</span>
+                            <span class="value">{{ patient_data.get('baseline_hb', '-') }} g/dL</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Hematocrit</span>
+                            <span class="value">{{ patient_data.get('baseline_hct', '-') }}%</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">NT-proBNP</span>
+                            <span class="value">{{ patient_data.get('baseline_ntbnp', '-') }} pg/mL</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Urea</span>
+                            <span class="value">{{ patient_data.get('baseline_urea', '-') }} mg/dL</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Cystatin C</span>
+                            <span class="value">{{ patient_data.get('baseline_cys', '-') }} mg/L</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">hs-cTnT</span>
+                            <span class="value">{{ patient_data.get('baseline_hscnt', '-') }} ng/L</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">GDF-15</span>
+                            <span class="value">{{ patient_data.get('baseline_gdf15', '-') }} pg/mL</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">CRP</span>
+                            <span class="value">{{ patient_data.get('baseline_crp', '-') }} mg/L</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">IL-6</span>
+                            <span class="value">{{ patient_data.get('baseline_il6', '-') }} pg/mL</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Cholesterol</span>
+                            <span class="value">{{ patient_data.get('baseline_chol', '-') }} mg/dL</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">HbA1c</span>
+                            <span class="value">{{ patient_data.get('baseline_hb_a1c', '-') }}%</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Transferrin</span>
+                            <span class="value">{{ patient_data.get('baseline_tf', '-') }} mg/dL</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Free Testosterone</span>
+                            <span class="value">{{ patient_data.get('baseline_ft', '-') }} ng/dL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column 2: Cardiac Function, Physical Exam, Visit Info -->
+                <div class="col-md-4">
+                    <div class="patient-data-section">
+                        <h6><i class="fas fa-heart mr-2"></i>Cardiac Function</h6>
+                        <div class="patient-data-item">
+                            <span class="label">LVEF</span>
+                            <span class="value">{{ patient_data.get('lvef', '-') }}%</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">NYHA Class</span>
+                            <span class="value">{{ patient_data.get('baseline_nyha', '-') }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">QRS Duration</span>
+                            <span class="value">{{ patient_data.get('baseline_qrs', '-') }} ms</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Ischaemic Etiology</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('baseline_ischaemic') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Pacemaker Rhythm</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('PM_Rhythm_ECG') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">EP/HF Encoded</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('EP_HF_encoded') == 1 else 'No' }}</span>
+                        </div>
+                    </div>
+
+                    <div class="patient-data-section">
+                        <h6><i class="fas fa-stethoscope mr-2"></i>Physical Exam</h6>
+                        <div class="patient-data-item">
+                            <span class="label">Orthopnea</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('baseline_orthopnea') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Rales</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('baseline_rales') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">JVD</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('baseline_jdv') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Edema</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('baseline_edema') == 1 else 'No' }}</span>
+                        </div>
+                    </div>
+
+                    <div class="patient-data-section">
+                        <h6><i class="fas fa-pills mr-2"></i>Current Medications</h6>
+                        <div class="patient-data-item">
+                            <span class="label">Beta-Blocker</span>
+                            <span class="value">{{ patient_data.get('bb_dose', '-') }} mg</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">ARNI</span>
+                            <span class="value">{{ patient_data.get('arni_dose') if patient_data.get('arni_dose') else '-' }} mg</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">SGLT2i</span>
+                            <span class="value">{{ patient_data.get('sglt_dose', '-') }} mg</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">MRA</span>
+                            <span class="value">{{ patient_data.get('mra_dose', '-') }} mg</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Loop Diuretic</span>
+                            <span class="value">{{ patient_data.get('loopd_dose', '-') }} mg</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">ACE Inhibitor</span>
+                            <span class="value">{{ patient_data.get('ace_dose', '-') }} mg</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">ARB</span>
+                            <span class="value">{{ patient_data.get('arb_dose', '-') }} mg</span>
+                        </div>
+                    </div>
+
+                    <div class="patient-data-section">
+                        <h6><i class="fas fa-calendar-alt mr-2"></i>Visit Information</h6>
+                        <div class="patient-data-item">
+                            <span class="label">Days Since Initial</span>
+                            <span class="value">{{ patient_data.get('visit_time_days', '-') }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Days Since Last Med</span>
+                            <span class="value">{{ patient_data.get('time_from_last_medication', '-') }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column 3: Medical History, Previous Medications -->
+                <div class="col-md-4">
+                    <div class="patient-data-section">
+                        <h6><i class="fas fa-notes-medical mr-2"></i>Medical History</h6>
+                        <div class="patient-data-item">
+                            <span class="label">Atrial Fibrillation</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('mh_af') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Diabetes</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('mh_dm') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">CKD</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('mh_ckd') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Hypertension</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('mh_hypertension') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">MI History</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('mh_mi') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Angina</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('mh_agina') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">CABG</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('mh_cabg') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Valvular Heart Disease</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('mh_vavhd') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Stroke</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('mh_stroke') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Bundle Branch Block</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('mh_bbb') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Implantable Device</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('mh_impl_dev') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">COPD</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('mh_copd') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Hepatic Disease</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('mh_hept') == 1 else 'No' }}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Smoking</span>
+                            <span class="value">{% if patient_data.get('mh_smoke') == 0 %}Never{% elif patient_data.get('mh_smoke') == 1 %}Former{% elif patient_data.get('mh_smoke') == 2 %}Current{% else %}-{% endif %}</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Aspirin Use</span>
+                            <span class="value">{{ 'Yes' if patient_data.get('aspirin') == 1 else 'No' }}</span>
+                        </div>
+                    </div>
+
+                    <div class="patient-data-section">
+                        <h6><i class="fas fa-history mr-2"></i>Previous Medications</h6>
+                        <div class="patient-data-item">
+                            <span class="label">Prev BB Dose</span>
+                            <span class="value">{{ patient_data.get('DoseBB_prev', '-') }}%</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Prev RAS Dose</span>
+                            <span class="value">{{ patient_data.get('RASDose_prev', '-') }}%</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Prev Spiro Dose</span>
+                            <span class="value">{{ patient_data.get('DoseSpiro_prev', '-') }}%</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Prev Loop Dose</span>
+                            <span class="value">{{ patient_data.get('Loop_dose_prev', '-') }} mg</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Prev SGLT2i Dose</span>
+                            <span class="value">{{ patient_data.get('SGLT2Dose_prev', '-') }} mg</span>
+                        </div>
+                        <div class="patient-data-item">
+                            <span class="label">Prev ARNI Dose</span>
+                            <span class="value">{{ patient_data.get('ARNIDose_prev', '-') }} mg</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle mr-2"></i>
+                Patient data is not available for this analysis.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════════
+             TAB 3: MODEL (chart + detailed table)
+             ═══════════════════════════════════════════════════════════════════════ -->
+        <div class="tab-pane fade" id="model" role="tabpanel">
 
             <!-- Treatment Effect Chart -->
             <div class="card mb-4">
@@ -318,7 +712,7 @@
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
-                            <thead style="background: #343a40; color: white;">
+                            <thead style="background: #495057; color: white;">
                                 <tr>
                                     <th style="padding: 14px 16px;">Treatment</th>
                                     <th style="padding: 14px 16px;">Tau (Effect)</th>
@@ -390,14 +784,14 @@
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════════════════
-             TAB 3: AI EXPLANATION (supplementary)
+             TAB 4: LLM (supplementary)
              ═══════════════════════════════════════════════════════════════════════ -->
-        <div class="tab-pane fade" id="explanation" role="tabpanel">
+        <div class="tab-pane fade" id="llm" role="tabpanel">
             {% if alex_guidance %}
             <div class="card" style="border: 1px solid #e9ecef; border-radius: 10px;">
                 <div class="card-header d-flex justify-content-between align-items-center" style="background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
                     <div>
-                        <strong>AI-Generated Explanation</strong>
+                        <strong>AI Treatment Suggestions</strong>
                         <span class="text-muted ml-2" style="font-size: 0.85rem;">(supplementary)</span>
                     </div>
                     {% if alex_guidance.ok %}
@@ -410,7 +804,7 @@
                     {% if alex_guidance.ok and alex_guidance.answer %}
 
                     <div class="mb-3">
-                        <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d; margin-bottom: 6px;">Explanation</div>
+                        <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d; margin-bottom: 6px;">Recommended Actions</div>
                         <div style="background: #f8fbff; border: 1px solid #d9e9fb; border-left: 4px solid #4a90d9; border-radius: 6px; padding: 16px 20px;">
                         <div style="font-size: 1rem; line-height: 1.7; margin-bottom: 0; color: #2c3e50;">
                             {% for line in (alex_guidance.answer|trim|replace('\r\n', '\n')).split('\n') %}
@@ -457,18 +851,20 @@
                     </div>
                     {% endif %}
 
-                    <div class="rounded" style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px 12px;">
-                        <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d; margin-bottom: 4px;">System Details</div>
-                        <div class="text-muted" style="font-size: 0.8rem; line-height: 1.5;">
-                            This explanation is generated from the treatment effect data shown in the Evidence tab.
-                            It does not replace clinical judgment.
-                            {% if alex_guidance.model %}<br>Model: {{ alex_guidance.model }}{% endif %}
-                            {% if alex_guidance.request_id %}<br>Request: {{ alex_guidance.request_id }}{% endif %}
+                    <div class="rounded" style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 14px 18px;">
+                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d; margin-bottom: 8px; font-weight: 600;">
+                            <i class="fas fa-cog mr-1"></i>System Details
+                        </div>
+                        <div class="text-muted" style="font-size: 0.85rem; line-height: 1.6;">
+                            This AI-generated explanation is derived from the treatment effect data shown in the Evidence tab.<br>
+                            It serves as supplementary information and does not replace clinical judgment.
+                            {% if alex_guidance.model %}<br><strong>Model:</strong> {{ alex_guidance.model }}{% endif %}
+                            {% if alex_guidance.request_id %}<br><strong>Request ID:</strong> <code>{{ alex_guidance.request_id }}</code>{% endif %}
                             {% if alex_guidance.metadata and alex_guidance.metadata.pipeline_runner %}
-                            <br>Pipeline: {{ alex_guidance.metadata.pipeline_runner }}
+                            <br><strong>Pipeline:</strong> {{ alex_guidance.metadata.pipeline_runner }}
                             {% endif %}
                             {% if alex_guidance.metadata and alex_guidance.metadata.retrieval_mode %}
-                            | Retrieval: {{ alex_guidance.metadata.retrieval_mode }}
+                            | <strong>Retrieval:</strong> {{ alex_guidance.metadata.retrieval_mode }}
                             {% endif %}
                         </div>
                     </div>
@@ -478,8 +874,17 @@
                         <strong>AI explanation unavailable</strong>
                         <p class="mb-0 mt-1" style="font-size: 0.92rem;">
                             The treatment recommendation above is based on the statistical analysis.
-                            The AI explanation service is temporarily unavailable.
+                            The AI explanation service is currently unavailable.
                         </p>
+                        {% if alex_guidance.error %}
+                        <p class="mb-0 mt-2" style="font-size: 0.86rem; color: #495057;">
+                            <strong>Reason:</strong>
+                            {{ alex_guidance.error.message if alex_guidance.error.message else "Unknown error" }}
+                            {% if alex_guidance.error.code %}
+                            ({{ alex_guidance.error.code }})
+                            {% endif %}
+                        </p>
+                        {% endif %}
                     </div>
                     {% endif %}
                 </div>
@@ -491,18 +896,6 @@
             {% endif %}
         </div>
 
-    </div>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════════
-         ACTIONS
-         ═══════════════════════════════════════════════════════════════════════════ -->
-    <div class="d-flex justify-content-center mt-4 pt-2" style="gap: 12px;">
-        <a href="/" class="btn btn-primary px-4">
-            <i class="fas fa-home mr-1"></i> Home
-        </a>
-        <a href="/predict" class="btn btn-outline-secondary px-4">
-            <i class="fas fa-redo mr-1"></i> New Analysis
-        </a>
     </div>
 
 </div>

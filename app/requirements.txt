@@ -16,3 +16,15 @@ six==1.17.0
 tzdata==2025.3
 urllib3==2.6.3
 Werkzeug==3.1.6
+
+# Database
+SQLAlchemy==2.0.36
+PyMySQL==1.1.1
+cryptography==44.0.0
+
+# Environment management
+python-dotenv==1.0.1
+
+# Authentication (Auth0)
+python-jose[cryptography]==3.3.0
+Flask-Session==0.8.0

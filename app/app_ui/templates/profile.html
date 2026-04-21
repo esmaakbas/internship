@@ -1,0 +1,158 @@
+{% extends "layout.html" %}
+
+{% block title %}Profile - Capsico Inference{% endblock %}
+{% block nav_profile %}btn-light{% endblock %}
+
+{% block extra_head %}
+<style>
+    .profile-header {
+        background: #0090A5;
+        border-bottom: 3px solid #E73C0D;
+        padding: 20px 24px;
+    }
+
+    .profile-info-row {
+        padding: 12px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .profile-info-row:last-child {
+        border-bottom: none;
+    }
+
+    .profile-label {
+        color: #6c757d;
+        font-weight: 500;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .profile-value {
+        color: #1a252f;
+        font-size: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card">
+                <div class="profile-header">
+                    <h4 class="mb-0 text-white"><i class="fas fa-user mr-2"></i> User Profile</h4>
+                </div>
+                <div class="card-body" style="padding: 24px 28px;">
+                    <div class="profile-info-row">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <span class="profile-label">User ID</span>
+                            </div>
+                            <div class="col-md-8">
+                                <code class="profile-value">{{ user.id }}</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-info-row">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <span class="profile-label">Email</span>
+                            </div>
+                            <div class="col-md-8">
+                                <span class="profile-value">{{ user.email }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-info-row">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <span class="profile-label">Display Name</span>
+                            </div>
+                            <div class="col-md-8">
+                                <span class="profile-value">{{ user.display_name or 'Not set' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-info-row">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <span class="profile-label">Role</span>
+                            </div>
+                            <div class="col-md-8">
+                                {% if user.role|lower == 'admin' %}
+                                    <span class="badge" style="background: #E73C0D; color: white; padding: 5px 10px; font-size: 0.8rem;">
+                                        Administrator
+                                    </span>
+                                {% else %}
+                                    <span class="badge" style="background: #0090A5; color: white; padding: 5px 10px; font-size: 0.8rem;">
+                                        User
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-info-row">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <span class="profile-label">Role Claim Key</span>
+                            </div>
+                            <div class="col-md-8">
+                                <code class="text-muted small">{{ auth0_role_claim }}</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-info-row">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <span class="profile-label">Account Status</span>
+                            </div>
+                            <div class="col-md-8">
+                                {% if user.is_active %}
+                                    <span class="badge badge-success" style="padding: 5px 10px; font-size: 0.8rem;">
+                                        Active
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-secondary" style="padding: 5px 10px; font-size: 0.8rem;">
+                                        Inactive
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-info-row">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <span class="profile-label">Auth0 Subject</span>
+                            </div>
+                            <div class="col-md-8">
+                                <code class="text-muted small">{{ user.auth0_sub }}</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert mt-4" style="background: #f8f9fa; border: 1px solid #dee2e6; border-left: 3px solid #0090A5; display: flex; align-items: center; font-size: 13px;">
+                        <i class="fas fa-info-circle mr-2" style="color: #0090A5;"></i>
+                        <span><strong>Note:</strong> Role is read from your verified Auth0 ID token claim and local account status is enforced from this app database.</span>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <a href="/" class="btn btn-primary mr-2">
+                            <i class="fas fa-home mr-1"></i> Back to Home
+                        </a>
+                        <a href="/auth/logout" class="btn btn-danger">
+                            <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
