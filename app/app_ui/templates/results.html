@@ -217,6 +217,12 @@
             <li class="nav-item">
                 <a class="nav-link" id="llm-tab" data-toggle="tab" href="#llm" role="tab" style="font-weight: 500; color: #6c757d;">LLM</a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" id="digital-twin-tab" data-toggle="tab" href="#digital_twin" role="tab"
+                style="font-weight: 500; color: #6c757d;">
+                    Digital Twin
+                </a>
+            </li>
         </ul>
         <div class="d-flex align-items-center mb-2" style="gap: 8px;">
             {% if prediction_id %}
@@ -915,6 +921,111 @@
             {% endif %}
         </div>
 
+
+        <!-- ═══════════════════════════════════════════════════════════════════════
+             TAB 5: Digital Twin
+             ═══════════════════════════════════════════════════════════════════════ -->
+        <div class="tab-pane fade" id="digital_twin" role="tabpanel">
+            <div id="digital-twin-container" class="digital-twin-container">
+
+                <!-- SLIDERS -->
+                <!--
+                <div id="controls" class="controls">
+                <div class="card">
+                    <div class="form-group">
+                    <label for="bpsys">Systolic BP (BPsys): <span id="bpsys-value">130</span></label>
+                    <input type="range" id="bpsys" min="80" max="200" value="130">
+                    </div>
+                    <div class="form-group">
+                    <label for="bpdias">Diastolic BP (BPdias): <span id="bpdias-value">90</span></label>
+                    <input type="range" id="bpdias" min="50" max="150" value="90">
+                    </div>
+                    <div class="form-group">
+                    <label for="creatinine">
+                        Creatinine (mg/dL): 
+                        <span id="creatinine-value">1.0</span>
+                    </label>
+                    <input type="range" id="creatinine" min="0.5" max="3.0" step="0.1" value="1.0">
+                    </div>
+                </div>
+                </div>
+                -->
+
+                <!-- 3D view + info panel -->
+                <div id="main-view" class="main-view">            
+                    <div id="three-container" class="three-container">
+                        <!-- Loading data -->
+                        <div id="loading-indicator" class="loading-hidden">
+                            <div class="spinner"></div>
+                            <span>Patient data loading...</span>
+                        </div>
+                        
+                        <div id="checkboxOverlay" class="UIoverlay">
+                        <label>
+                            <input type="checkbox" id="OrgansCheckbox" checked />
+                            Organs
+                        </label>
+                        <div class="nested">
+                            <label>
+                            <input type="checkbox" id="HeartCheckbox" checked />
+                            Heart
+                            </label>
+                            <span class="eye-icon" data-organ="Heart">👁️</span>
+                            <label>
+                            <input type="checkbox" id="KidneysCheckbox" checked />
+                            Kidneys
+                            </label>
+                            <span class="eye-icon" data-organ="Kidneys">👁️</span>
+                        </div>
+
+                        <label>
+                            <input type="checkbox" id="ArteriesCheckbox" checked />
+                            Arteries
+                        </label>
+                        <span class="eye-icon" data-organ="Arteries">👁️</span>
+                        <div class="UIoverlay">
+                            <select id="drug-select">
+                                <option value="RAS">RAS</option>
+                                <option value="BB">BB</option>
+                            </select>
+
+                            <select id="dosage-select">
+                                <option value="1x">1x</option>
+                                <option value="2x">2x</option>
+                            </select>
+                        </div>
+                        </div>
+
+                        <div id="homeOverlay" class="UIoverlay">
+                            <button id="homeButton" class="home-btn">
+                                <i class="fas fa-home mr-1"></i>
+                            </button>
+                        </div>
+
+                        <div id="pauseOverlay" class="UIoverlay">
+                            <button id="toggle-heartbeat" class="btn btn-secondary">
+                                ⏸ Pause Heartbeat
+                            </button>
+                        </div>
+                        
+                    </div>
+
+                    <div id="info-panel" class="info-panel">
+                        <div id="info-content" class="info-content">
+                            <h3>Welcome to the Digital Twin</h3><p>Click on an organ to see details.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div id="decision-table"></div>
+            </div>
+
+            <canvas id="ecg-canvas" width="600" height="120"></canvas>
+
+        </div>
+
     </div>
 
 </div>
@@ -923,6 +1034,7 @@
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script id="results-data" type="application/json">{{ data | tojson }}</script>
+<script type="module" src="{{ url_for('static', filename='digital_twin/assets/index-B8elMjVv.js') }}"></script>
 <script>
 (function () {
     const rawDataNode = document.getElementById('results-data');
@@ -1050,5 +1162,14 @@
         });
     }
 })();
+</script>
+<!-- Small script to make sure digital twin is loaded correctly on tab click -->
+<script>
+$(document).ready(function () {
+    $('#digital-twin-tab').on('shown.bs.tab', function () {
+        // Trigger your existing resize logic
+        window.dispatchEvent(new Event('resize'));
+    });
+});
 </script>
 {% endblock %}
