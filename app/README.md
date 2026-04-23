@@ -48,7 +48,12 @@ A Python-based application for running inference predictions using the Capsico R
    pip install python-dotenv
    ```
 
-5. **Verify setup**:
+5. **Copy env variables to .env file**:
+   ```bash
+   cp .env.example .env
+   ```
+
+6. **Verify setup**:
    ```bash
    python verify_setup.py
    ```

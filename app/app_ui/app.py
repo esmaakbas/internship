@@ -33,7 +33,7 @@ from config import (
 from database import (
     check_connection,
     count_users,
-    create_prediction_record,
+    #create_prediction_record, # (not existent in database.py)
     validate_database,
     list_users_for_admin,
     upsert_user_record_from_auth0,
