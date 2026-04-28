@@ -966,30 +966,40 @@
                             Organs
                         </label>
                         <div class="nested">
-                            <label>
-                            <input type="checkbox" id="HeartCheckbox" checked />
-                            Heart
-                            </label>
-                            <span class="eye-icon" data-organ="Heart">👁️</span>
-                            <label>
-                            <input type="checkbox" id="KidneysCheckbox" checked />
-                            Kidneys
-                            </label>
-                            <span class="eye-icon" data-organ="Kidneys">👁️</span>
+                            <div class="organ-row">
+                                <label>
+                                    <input type="checkbox" id="HeartCheckbox" checked />
+                                    Heart
+                                </label>
+                                <span class="eye-icon" data-organ="Heart">🔍︎</span>
+                            </div>
+
+                            <div class="organ-row">
+                                <label>
+                                    <input type="checkbox" id="KidneysCheckbox" checked />
+                                    Kidneys
+                                </label>
+                                <span class="eye-icon" data-organ="Kidneys">🔍︎</span>
+                            </div>
                         </div>
 
-                        <label>
-                            <input type="checkbox" id="ArteriesCheckbox" checked />
-                            Arteries
-                        </label>
-                        <span class="eye-icon" data-organ="Arteries">👁️</span>
+                        <div class="organ-row">
+                            <label>
+                                <input type="checkbox" id="ArteriesCheckbox" checked />
+                                Arteries
+                            </label>
+                            <span class="eye-icon" data-organ="Arteries">🔍︎</span>
+                        </div>
+
                         <div class="UIoverlay">
                             <select id="drug-select">
+                                <optgroup label="Drug:"></optgroup>
                                 <option value="RAS">RAS</option>
                                 <option value="BB">BB</option>
                             </select>
 
                             <select id="dosage-select">
+                                <optgroup label="Dosage:"></optgroup>
                                 <option value="1x">1x</option>
                                 <option value="2x">2x</option>
                             </select>
@@ -1007,12 +1017,27 @@
                                 ⏸ Pause Heartbeat
                             </button>
                         </div>
+
+                        <div class="attribution">
+                            BodyParts3D, © The Database Center for Life Science, licensed under CC BY 4.0
+                        </div>
                         
                     </div>
 
                     <div id="info-panel" class="info-panel">
                         <div id="info-content" class="info-content">
                             <h3>Welcome to the Digital Twin</h3><p>Click on an organ to see details.</p>
+                        </div>
+                        <div id="ecg-wrapper">
+                            <p><strong>Heart rate:</strong></p>
+                            <div id="ecg-top-bar">
+                                <div id="heartrate-display">
+                                    <span class="heart-icon">❤</span>
+                                    <span id="heartrate-value">60</span> bpm
+                                </div>
+                            </div>
+
+                            <canvas id="ecgCanvas" class="grid" width="240" height="60"></canvas>
                         </div>
                     </div>
                 </div>
@@ -1021,8 +1046,6 @@
             <div>
                 <div id="decision-table"></div>
             </div>
-
-            <canvas id="ecg-canvas" width="600" height="120"></canvas>
 
         </div>
 
@@ -1034,7 +1057,7 @@
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script id="results-data" type="application/json">{{ data | tojson }}</script>
-<script type="module" src="{{ url_for('static', filename='digital_twin/assets/index-B8elMjVv.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='digital_twin/assets/index-DqQMKk42.js') }}"></script>
 <script>
 (function () {
     const rawDataNode = document.getElementById('results-data');
