@@ -452,3 +452,218 @@ input[type="range"] {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+
+/* ----------------------------------------------*/
+/* Checkbox and dropdown UI improvements */
+/* ---------------------------------------------- */
+
+/* --- LABEL GROUPING --- */
+#checkboxOverlay label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+/* --- NESTED CHECKBOXES --- */
+/* Make each organ row horizontal */
+.organ-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 6px 0;
+}
+
+/* Ensure labels don’t stretch weirdly */
+.organ-row label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nested {
+    margin-left: 18px;
+    padding-left: 10px;
+    border-left: 2px solid #d8e2ea;
+    margin-top: 4px;
+}
+
+/* --- EYE ICONS --- */
+.eye-icon {
+    margin-left: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.eye-icon:hover {
+    opacity: 1;
+}
+
+/* --- CUSTOM CHECKBOXES --- */
+input[type="checkbox"] {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #6aa6c8;
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:checked {
+    background-color: #6aa6c8;
+    border-color: #6aa6c8;
+}
+
+input[type="checkbox"]:checked::after {
+    content: "✔";
+    color: white;
+    font-size: 12px;
+    position: absolute;
+    top: -1px;
+    left: 3px;
+}
+
+/* --- DROPDOWNS --- */
+select {
+    width: 100%;
+    padding: 8px 10px;
+    margin-top: 10px;
+    border-radius: 6px;
+    border: 1px solid #c7d6df;
+    background: #f8fafc;
+    font-size: 14px;
+    color: #1a1a1a;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+select:focus {
+    outline: none;
+    border-color: #6aa6c8;
+    box-shadow: 0 0 0 2px rgba(106, 166, 200, 0.25);
+}
+
+/* --- HOME BUTTON --- */
+.home-btn {
+    background: #6aa6c8;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 50%;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    transition: background 0.2s ease;
+}
+
+.home-btn:hover {
+    background: #5a94b3;
+}
+
+/* --- PAUSE BUTTON --- */
+#toggle-heartbeat {
+    background: #6aa6c8;
+    border: 1px solid #c7d6df;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+#toggle-heartbeat:hover {
+    background: #4b91b9;
+}
+
+/* ----------------------------------------------*/
+/* Credits to BP3D for body parts */
+/* ---------------------------------------------- */
+
+.attribution {
+    position: absolute;
+    bottom: 8px;
+    right: 12px;
+    font-size: 11px;
+    opacity: 0.6;
+    background: rgba(255,255,255,0.6);
+    padding: 4px 6px;
+    border-radius: 4px;
+}
+
+/* ----------------------------------------------*/
+/* ECG styling */
+/* ---------------------------------------------- */
+
+#ecg-wrapper {
+    position: relative;
+    width: 240px;   /* match your canvas width */
+    height: 60px;  /* match your canvas height */
+    display: none; /* default hidden */
+}
+
+#ecgCanvas {
+    background-color: #000;
+    border: 1px solid #333;
+    width: 240px;
+    height: 60px;
+    box-shadow: 0 0 10px rgba(0,255,0,0.3);
+    position: relative;
+}
+
+/* ECG grid overlay */
+#ecgCanvas.grid {
+    background-image:
+        linear-gradient(rgba(0,255,0,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,0,0.05) 1px, transparent 1px),
+        linear-gradient(rgba(0,255,0,0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,0,0.1) 1px, transparent 1px);
+    background-size:
+        5px 5px,   /* thin horizontal lines */
+        5px 5px,   /* thin vertical lines */
+        25px 25px, /* thick horizontal lines */
+        25px 25px; /* thick vertical lines */
+}
+
+#ecg-top-bar {
+    position: relative;
+    top: 0px; /* adjust so it sits just above the ECG */
+    left: 0;
+    width: 100%;
+    height: 50px;
+    background-color: black;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-right: 8px;
+}
+
+#heartrate-display {
+    position: relative;
+    top: 0px;
+    right: 0px;
+    color: #00ff00;
+    font-family: "Inter", sans-serif;
+    font-size: 16px;
+    font-weight: 550;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-shadow: 0 0 6px rgba(0,255,0,0.6);
+}
+
+.heart-icon {
+    font-size: 22px;
+    color: #00ff00;
+    animation: pulse 1s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
