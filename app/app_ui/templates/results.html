@@ -1057,7 +1057,7 @@
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script id="results-data" type="application/json">{{ data | tojson }}</script>
-<script type="module" src="{{ url_for('static', filename='digital_twin/assets/index-DqQMKk42.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='digital_twin/assets/index-ZvvecqHt.js') }}"></script>
 <script>
 (function () {
     const rawDataNode = document.getElementById('results-data');
@@ -1189,10 +1189,24 @@
 <!-- Small script to make sure digital twin is loaded correctly on tab click -->
 <script>
 $(document).ready(function () {
+
+    // When the Digital Twin tab becomes visible
     $('#digital-twin-tab').on('shown.bs.tab', function () {
-        // Trigger your existing resize logic
         window.dispatchEvent(new Event('resize'));
+
+        // Enable heartbeat sound AFTER user interaction
+        if (window.heartbeatSoundManager) {
+            heartbeatSoundManager.enable();
+        }
     });
+
+    // When leaving the Digital Twin tab
+    $('#digital-twin-tab').on('hidden.bs.tab', function () {
+        if (window.heartbeatSoundManager) {
+            heartbeatSoundManager.disable();
+        }
+    });
+
 });
 </script>
 {% endblock %}
