@@ -667,3 +667,127 @@ select:focus {
     30%  { transform: scale(1.2); }
     100% { transform: scale(1); }
 }
+
+#decision-table {
+    display: none;
+    /*
+    display: block;
+    */
+}
+
+
+/* --------------------------------------- */
+/* Biomarker UI styling in info panel */
+/* --------------------------------------- */
+
+
+.biomarker-row {
+    margin-bottom: 14px;
+}
+
+.biomarker-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+}
+
+.biomarker-bar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        to right,
+        #1e3a8a,
+        #0ea5e9,
+        #22c0c5,
+        #22c55e,
+        #48c522,
+        #eab308,
+        #f97316,
+        #dc2626
+    );
+}
+
+.biomarker-range {
+    margin-top: 3px;
+    font-size: 0.75rem;
+    color: #666;
+}
+
+/* Threshold markers */
+.marker {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: white;
+    opacity: 0.9;
+}
+
+.min-marker,
+.max-marker {
+    background: white;
+}
+
+.danger-marker {
+    background: black;
+}
+
+.biomarker-bar-container {
+    position: relative;
+    margin-top: 2px;
+}
+
+.biomarker-bar-wrapper {
+    position: relative;
+    height: 12px;
+    border-radius: 999px;
+    overflow: hidden; /* keep this */
+    background: #eee;
+}
+
+.value-arrow {
+    position: absolute;
+    top: -6px; /* now visible */
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 6px solid black;
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+/* Comparison button and arrows per biomarker */
+.compare-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0 12px 0;
+}
+
+.compare-button {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    background: #ddd;
+    border: 1px solid #aaa;
+    cursor: pointer;
+}
+
+.compare-select {
+    flex: 0 0 40%;
+    padding: 2px 6px;
+    font-size: 0.8rem;
+    border-radius: 4px;
+}
+
+.primary-arrow {
+    border-bottom-color: black;
+}
+
+.compare-arrow {
+    border-bottom-color: grey;
+    opacity: 0.8;
+    transition: left 2s ease; /* smooth slide */
+}

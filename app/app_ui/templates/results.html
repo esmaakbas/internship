@@ -1008,12 +1008,15 @@
                                 <optgroup label="Drug:"></optgroup>
                                 <option value="RAS">RAS</option>
                                 <option value="BB">BB</option>
+                                <option value="Spiro">Spiro</option>
+                                <option value="Loop">Loop</option>
                             </select>
 
                             <select id="dosage-select">
                                 <optgroup label="Dosage:"></optgroup>
                                 <option value="1x">1x</option>
                                 <option value="2x">2x</option>
+                                <option value="3x">3x</option>
                             </select>
                         </div>
                         </div>
@@ -1069,7 +1072,7 @@
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script id="results-data" type="application/json">{{ data | tojson }}</script>
-<script type="module" src="{{ url_for('static', filename='digital_twin/assets/index-ZvvecqHt.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='digital_twin/assets/index-BiKErHdF.js') }}"></script>
 <script>
 (function () {
     const rawDataNode = document.getElementById('results-data');
