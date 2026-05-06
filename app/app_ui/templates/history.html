@@ -3,118 +3,358 @@
 {% block title %}Prediction History - Capsico{% endblock %}
 {% block nav_history %}active{% endblock %}
 
+{% block extra_head %}
+<style>
+    .history-shell {
+        max-width: 1140px;
+        margin: 0 auto;
+    }
+
+    .history-page-header h1 {
+        color: #007380;
+        font-weight: 700;
+        margin-bottom: 6px;
+        font-size: 1.8rem;
+    }
+
+    .history-page-header p {
+        margin-bottom: 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .history-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        background: #ffffff;
+        overflow: hidden;
+    }
+
+    .history-card-body {
+        padding: 1rem 1rem 0.5rem 1rem;
+    }
+
+    .history-table {
+        margin-bottom: 0;
+    }
+
+    .history-table thead th {
+        border-top: none;
+        border-bottom: 1px solid #e5e7eb;
+        color: #6b7280;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+        padding: 12px;
+        background: #f9fafb;
+    }
+
+    .history-table tbody td {
+        vertical-align: middle;
+        border-color: #f3f4f6;
+        padding: 14px 12px;
+        font-size: 14px;
+        color: #374151;
+    }
+
+    .history-table tbody tr {
+        transition: background-color 0.15s ease;
+    }
+
+    .history-table tbody tr:hover {
+        background-color: #f9fafb;
+    }
+
+    .summary-muted {
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .prediction-id {
+        font-weight: 700;
+        color: #1f2937;
+        letter-spacing: 0.02em;
+    }
+
+    .patient-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: #f3f4f6;
+        color: #374151;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .actions-inline {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .mini-action-btn {
+        min-width: 104px;
+        height: 34px;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+        background: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        color: #374151;
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .mini-action-btn:hover {
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .mini-action-btn-view {
+        color: #0090a5;
+    }
+
+    .mini-action-btn-view:hover {
+        background: #f0f9fa;
+        border-color: #0090a5;
+        color: #007380;
+    }
+
+    .mini-action-btn-pdf {
+        color: #b91c1c;
+    }
+
+    .mini-action-btn-pdf:hover {
+        background: #fef2f2;
+        border-color: #ef4444;
+        color: #991b1b;
+    }
+
+    .mini-action-btn-delete {
+        color: #9f1239;
+        border-color: #fbcfe8;
+        background: #fff1f2;
+    }
+
+    .mini-action-btn-delete:hover {
+        background: #ffe4e6;
+        border-color: #fda4af;
+        color: #881337;
+    }
+
+    .filters-grid .form-control,
+    .filters-grid .btn {
+        height: 38px;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .filters-grid .form-control:focus {
+        border-color: #0090a5;
+        box-shadow: 0 0 0 3px rgba(0, 144, 165, 0.1);
+        outline: none;
+    }
+
+    .pagination-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        border-top: 1px solid #f3f4f6;
+        gap: 12px;
+    }
+
+    .pagination-info {
+        font-size: 13px;
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    .pagination-btn {
+        padding: 6px 12px;
+        border: 1px solid #d1d5db;
+        background: white;
+        color: #6b7280;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+    }
+
+    .pagination-btn:hover {
+        background: #f9fafb;
+        border-color: #9ca3af;
+        text-decoration: none;
+        color: #374151;
+    }
+
+    .pagination-btn.disabled,
+    .pagination-btn.disabled:hover {
+        opacity: 0.4;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    @media (max-width: 991.98px) {
+        .actions-inline {
+            flex-direction: column;
+            width: 100%;
+            align-items: stretch;
+        }
+
+        .mini-action-btn {
+            width: 100%;
+        }
+
+        .pagination-wrapper {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .pagination-wrapper > div {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="container py-4 history-shell">
+    <div class="history-page-header d-flex justify-content-between align-items-start mb-4">
         <div>
-            <h2 class="mb-1">Prediction History</h2>
-            <p class="text-muted mb-0">Review past analyses, inspect details, and export PDF reports.</p>
+            <h1>Prediction History</h1>
+            <p>Browse previous analyses, inspect details, and export clinical-ready PDF reports.</p>
         </div>
         <a href="/" class="btn btn-outline-primary btn-sm">
             <i class="fas fa-redo mr-1"></i> New Analysis
         </a>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-body">
+    <div class="history-card mb-4">
+        <div class="history-card-body">
             <form method="get" action="{{ url_for('history.history_index') }}">
-                <div class="form-row">
+                <div class="form-row filters-grid">
                     <div class="form-group col-md-2">
                         <label class="small text-muted">Per Page</label>
-                        <select class="form-control form-control-sm" name="limit">
+                        <select class="form-control" name="limit">
                             <option value="10" {% if active_filters.limit == '10' %}selected{% endif %}>10</option>
                             <option value="20" {% if active_filters.limit == '20' %}selected{% endif %}>20</option>
                             <option value="50" {% if active_filters.limit == '50' %}selected{% endif %}>50</option>
                         </select>
                     </div>
                     <div class="form-group col-md-3">
-                        <label class="small text-muted">Model Version</label>
-                        <input type="text" class="form-control form-control-sm" name="model_version" value="{{ active_filters.model_version }}" placeholder="e.g. plumber-v1">
-                    </div>
-                    <div class="form-group col-md-2">
                         <label class="small text-muted">From</label>
-                        <input type="date" class="form-control form-control-sm" name="date_from" value="{{ active_filters.date_from }}">
-                    </div>
-                    <div class="form-group col-md-2">
-                        <label class="small text-muted">To</label>
-                        <input type="date" class="form-control form-control-sm" name="date_to" value="{{ active_filters.date_to }}">
+                        <input type="date" class="form-control" name="date_from" value="{{ active_filters.date_from }}">
                     </div>
                     <div class="form-group col-md-3">
+                        <label class="small text-muted">To</label>
+                        <input type="date" class="form-control" name="date_to" value="{{ active_filters.date_to }}">
+                    </div>
+                    <div class="form-group col-md-4">
                         <label class="small text-muted">Search</label>
-                        <input type="text" class="form-control form-control-sm" name="search" value="{{ active_filters.search }}" placeholder="Patient ID or Prediction ID">
+                        <input type="text" class="form-control" name="search" value="{{ active_filters.search }}" placeholder="Patient ID or Prediction ID">
                     </div>
                 </div>
                 <div class="d-flex justify-content-end" style="gap: 8px;">
-                    <a href="{{ url_for('history.history_index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
-                    <button type="submit" class="btn btn-primary btn-sm">Apply Filters</button>
+                    <a href="{{ url_for('history.history_index') }}" class="btn btn-outline-secondary">Reset</a>
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div class="card">
+    <div class="history-card">
         <div class="table-responsive">
-            <table class="table table-sm mb-0">
-                <thead class="thead-light">
+            <table class="table history-table">
+                <thead>
                     <tr>
                         <th>Prediction ID</th>
                         <th>Date</th>
-                        <th>Model</th>
                         <th>Patient</th>
-                        <th>Summary</th>
                         <th class="text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% if predictions %}
                         {% for prediction in predictions %}
-                        {% set summary = prediction.output_json.get('decision_summary', {}) %}
-                        {% set primary = summary.get('primary_recommendation', {}) if summary else {} %}
                         <tr>
-                            <td>#{{ prediction.id }}</td>
-                            <td>{{ prediction.created_at.strftime('%Y-%m-%d %H:%M') if prediction.created_at else '-' }}</td>
-                            <td>{{ prediction.model_version or '-' }}</td>
-                            <td>{{ prediction.patient_id or '-' }}</td>
                             <td>
-                                {% if primary and primary.get('Drug') %}
-                                Recommended: <strong>{{ primary.get('Drug') }}</strong>
-                                {% else %}
-                                Result available
-                                {% endif %}
+                                <span class="prediction-id">#{{ prediction.id }}</span>
+                            </td>
+                            <td>
+                                {{ prediction.created_at.strftime('%Y-%m-%d') if prediction.created_at else '-' }}
+                                <div class="summary-muted">{{ prediction.created_at.strftime('%H:%M') if prediction.created_at else '' }}</div>
+                            </td>
+                            <td>
+                                <span class="patient-pill"><i class="fas fa-user-injured"></i>{{ prediction.patient_id or '-' }}</span>
                             </td>
                             <td class="text-right">
-                                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('history.history_detail', prediction_id=prediction.id) }}">View</a>
-                                <form method="post" action="{{ url_for('history.generate_prediction_report', prediction_id=prediction.id) }}" style="display:inline-block;">
-                                    <button type="submit" class="btn btn-outline-secondary btn-sm">Download PDF</button>
-                                </form>
+                                <div class="actions-inline">
+                                    <a class="mini-action-btn mini-action-btn-view" href="{{ url_for('history.generate_prediction_report', prediction_id=prediction.id) }}" target="_blank" rel="noopener noreferrer">
+                                        <i class="fas fa-eye"></i> View PDF
+                                    </a>
+                                    <a class="mini-action-btn mini-action-btn-pdf" href="{{ url_for('history.generate_prediction_report', prediction_id=prediction.id, download=1) }}">
+                                        <i class="fas fa-file-pdf"></i> Download PDF
+                                    </a>
+                                    <form method="post" action="{{ url_for('history.delete_prediction', prediction_id=prediction.id) }}" class="d-inline mb-0" onsubmit="return confirm('Delete prediction #{{ prediction.id }}? This cannot be undone.');">
+                                        <button type="submit" class="mini-action-btn mini-action-btn-delete">
+                                            <i class="fas fa-trash-alt"></i> Delete
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">No predictions found for current filters.</td>
+                            <td colspan="4" class="text-center text-muted py-4">No predictions found for current filters.</td>
                         </tr>
                     {% endif %}
                 </tbody>
             </table>
         </div>
 
-        <div class="card-footer d-flex justify-content-between align-items-center">
-            <small class="text-muted">
+        <div class="pagination-wrapper">
+            <div class="pagination-info">
                 Showing page {{ pagination.page }} of {{ pagination.total_pages }}
                 ({{ pagination.total }} total)
-            </small>
+            </div>
             <div>
                 {% if prev_page_url %}
-                <a href="{{ prev_page_url }}" class="btn btn-outline-secondary btn-sm">Previous</a>
+                <a href="{{ prev_page_url }}" class="pagination-btn">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
                 {% else %}
-                <button class="btn btn-outline-secondary btn-sm" disabled>Previous</button>
+                <span class="pagination-btn disabled">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </span>
                 {% endif %}
 
                 {% if next_page_url %}
-                <a href="{{ next_page_url }}" class="btn btn-outline-secondary btn-sm">Next</a>
+                <a href="{{ next_page_url }}" class="pagination-btn">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
                 {% else %}
-                <button class="btn btn-outline-secondary btn-sm" disabled>Next</button>
+                <span class="pagination-btn disabled">
+                    Next <i class="fas fa-chevron-right"></i>
+                </span>
                 {% endif %}
             </div>
         </div>

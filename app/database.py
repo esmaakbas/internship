@@ -10,8 +10,10 @@ SECURITY & RELIABILITY:
 - Connection timeouts to prevent hanging
 - Proper exception handling
 """
+import json
 import threading
-from typing import Optional, List
+from datetime import datetime, timedelta
+from typing import Any, Dict, Optional, List
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
@@ -275,6 +277,40 @@ def get_user_by_id(user_id: int) -> Optional[dict]:
         raise
 
 
+def get_user_by_auth0_sub(auth0_sub: str) -> Optional[dict]:
+    """Get user by Auth0 subject (auth0_sub) and return as dictionary.
+
+    Args:
+        auth0_sub: Auth0 subject string
+
+    Returns:
+        dict | None: User data or None if not found
+    """
+    engine = get_engine()
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(
+                text(
+                    "SELECT id, auth0_sub, email, display_name, role, is_active "
+                    "FROM users WHERE auth0_sub = :auth0_sub"
+                ),
+                {"auth0_sub": auth0_sub},
+            ).fetchone()
+
+            if result:
+                return {
+                    "id": result[0],
+                    "auth0_sub": result[1],
+                    "email": result[2],
+                    "display_name": result[3],
+                    "role": result[4],
+                    "is_active": bool(result[5]),
+                }
+            return None
+    except SQLAlchemyError:
+        raise
+
+
 def list_users_for_admin() -> List[dict]:
     """List users for admin panel, newest first.
 
@@ -402,3 +438,216 @@ def delete_user_by_id(user_id: int) -> bool:
             return result.rowcount > 0
     except SQLAlchemyError:
         raise
+
+
+# ---------------------------------------------------------------------------
+# Prediction helpers (simple monolith-style DB access for history feature)
+# ---------------------------------------------------------------------------
+
+def create_prediction_record(
+    user_id: int,
+    input_json: Dict[str, Any],
+    output_json: Dict[str, Any],
+    model_version: str,
+) -> int:
+    """Insert prediction row and return generated id."""
+    engine = get_engine()
+    try:
+        with engine.begin() as conn:
+            result = conn.execute(
+                text(
+                    "INSERT INTO predictions (user_id, input_json, output_json, model_version) "
+                    "VALUES (:user_id, :input_json, :output_json, :model_version)"
+                ),
+                {
+                    "user_id": user_id,
+                    "input_json": json.dumps(input_json),
+                    "output_json": json.dumps(output_json),
+                    "model_version": model_version,
+                },
+            )
+            return int(result.lastrowid)
+    except SQLAlchemyError:
+        raise
+
+
+def get_prediction_for_user(user_id: int, prediction_id: int) -> Optional[Dict[str, Any]]:
+    """Return one prediction row only if it belongs to the user."""
+    engine = get_engine()
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(
+                text(
+                    "SELECT id, user_id, input_json, output_json, created_at, model_version "
+                    "FROM predictions "
+                    "WHERE id = :prediction_id AND user_id = :user_id"
+                ),
+                {
+                    "prediction_id": prediction_id,
+                    "user_id": user_id,
+                },
+            ).fetchone()
+
+            if not row:
+                return None
+
+            return _prediction_row_to_dict(row)
+    except SQLAlchemyError:
+        raise
+
+
+def delete_prediction_for_user(user_id: int, prediction_id: int) -> bool:
+    """Delete one prediction row only if it belongs to the user."""
+    engine = get_engine()
+    try:
+        with engine.begin() as conn:
+            result = conn.execute(
+                text(
+                    "DELETE FROM predictions "
+                    "WHERE id = :prediction_id AND user_id = :user_id"
+                ),
+                {
+                    "prediction_id": prediction_id,
+                    "user_id": user_id,
+                },
+            )
+            return result.rowcount > 0
+    except SQLAlchemyError:
+        raise
+
+
+def list_predictions_for_user(
+    user_id: int,
+    *,
+    page: int,
+    limit: int,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    search: Optional[str] = None,
+) -> Dict[str, Any]:
+    """List prediction rows for a user with pagination and basic filters."""
+    page = max(1, int(page or 1))
+    limit = max(1, min(100, int(limit or 10)))
+    offset = (page - 1) * limit
+
+    filters = ["user_id = :user_id"]
+    params: Dict[str, Any] = {"user_id": user_id}
+
+    parsed_from = _parse_date(date_from)
+    if parsed_from:
+        filters.append("created_at >= :date_from")
+        params["date_from"] = parsed_from
+
+    parsed_to = _parse_date(date_to)
+    if parsed_to:
+        filters.append("created_at < :date_to")
+        params["date_to"] = parsed_to + timedelta(days=1)
+
+    if search:
+        filters.append(
+            "(" 
+            "CAST(id AS CHAR) LIKE :search OR "
+            "JSON_UNQUOTE(JSON_EXTRACT(input_json, '$.patientid')) LIKE :search OR "
+            "JSON_UNQUOTE(JSON_EXTRACT(input_json, '$.patient_id')) LIKE :search"
+            ")"
+        )
+        params["search"] = f"%{search.strip()}%"
+
+    where_clause = " AND ".join(filters)
+
+    engine = get_engine()
+    try:
+        with engine.connect() as conn:
+            total = int(
+                conn.execute(
+                    text(f"SELECT COUNT(*) FROM predictions WHERE {where_clause}"),
+                    params,
+                ).scalar()
+                or 0
+            )
+
+            rows = conn.execute(
+                text(
+                    "SELECT id, user_id, input_json, output_json, created_at, model_version "
+                    f"FROM predictions WHERE {where_clause} "
+                    "ORDER BY created_at DESC "
+                    "LIMIT :limit OFFSET :offset"
+                ),
+                {**params, "limit": limit, "offset": offset},
+            ).fetchall()
+
+            data = [_prediction_row_to_dict(row) for row in rows]
+
+            total_pages = max(1, (total + limit - 1) // limit) if total else 1
+
+            return {
+                "data": data,
+                "pagination": {
+                    "page": page,
+                    "limit": limit,
+                    "total": total,
+                    "total_pages": total_pages,
+                    "has_prev": page > 1,
+                    "has_next": page < total_pages,
+                },
+            }
+    except SQLAlchemyError:
+        raise
+
+
+def _prediction_row_to_dict(row) -> Dict[str, Any]:
+    input_json = _parse_json_field(row[2])
+    output_json = _parse_json_field(row[3])
+    return {
+        "id": int(row[0]),
+        "user_id": int(row[1]) if row[1] is not None else None,
+        "input_json": input_json,
+        "output_json": output_json,
+        "created_at": row[4],
+        "model_version": row[5],
+        "patient_id": _extract_patient_id(input_json),
+    }
+
+
+def _parse_json_field(value: Any) -> Dict[str, Any]:
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, (bytes, bytearray)):
+        value = value.decode("utf-8", errors="ignore")
+    if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return {}
+        try:
+            parsed = json.loads(value)
+            if isinstance(parsed, dict):
+                return parsed
+            return {"value": parsed}
+        except json.JSONDecodeError:
+            return {}
+    return {}
+
+
+def _extract_patient_id(input_json: Dict[str, Any]) -> Optional[str]:
+    for key in ("patientid", "patient_id", "patientId", "id"):
+        value = input_json.get(key)
+        if value is not None and str(value).strip() != "":
+            return str(value)
+    return None
+
+
+def _parse_date(raw_value: Optional[str]) -> Optional[datetime]:
+    if not raw_value:
+        return None
+    value = raw_value.strip()
+    if not value:
+        return None
+
+    for fmt in ("%Y-%m-%d", "%Y/%m/%d"):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+    return None

@@ -99,9 +99,30 @@ else:
 PLUMBER_API_URL = os.getenv("PLUMBER_API_URL", "http://localhost:8002")
 PLUMBER_PREDICT_URL = f"{PLUMBER_API_URL}/predict"
 
-# Alex LLM Guidance API Configuration
-ALEX_GUIDANCE_URL = os.getenv("ALEX_GUIDANCE_URL", "http://localhost:8000/guidance/generate")
+# Alex LLM Guidance API Configuration (LEGACY - UNUSED BY ACTIVE EXCHANGE FLOW)
+#
+# The application previously called an internal Alex service directly. That
+# delegated JWT flow is now deprecated in favour of the LLMGuidance exchange
+# flow. Keep this variable only for legacy compatibility/testing. DO NOT use
+# it in the active exchange flow; prefer the `LLM_GUIDANCE_*` settings below.
+# Set to empty by default to avoid accidental use.
+ALEX_GUIDANCE_URL = os.getenv("ALEX_GUIDANCE_URL", "")  # LEGACY_UNUSED
 ALEX_TIMEOUT_SECONDS = int(os.getenv("ALEX_TIMEOUT_SECONDS", "30"))
+
+# LLMGuidance (new) integration configuration
+# Default to public API gateway on port 8000 (production/dev gateway)
+LLM_GUIDANCE_API_URL = os.getenv("LLM_GUIDANCE_API_URL", "http://localhost:8000")
+LLM_GUIDANCE_AUTH_EXCHANGE_URL = os.getenv(
+    "LLM_GUIDANCE_AUTH_EXCHANGE_URL",
+    os.getenv("LLM_GUIDANCE_API_URL", "http://localhost:8000") + "/auth/exchange",
+)
+LLM_GUIDANCE_JOBS_URL = os.getenv(
+    "LLM_GUIDANCE_JOBS_URL",
+    os.getenv("LLM_GUIDANCE_API_URL", "http://localhost:8000") + "/guidance/jobs",
+)
+LLM_GUIDANCE_PROVIDER_SHARED_SECRET = os.getenv("LLM_GUIDANCE_PROVIDER_SHARED_SECRET")
+LLM_GUIDANCE_PROVIDER_SECRET_HEADER = os.getenv("LLM_GUIDANCE_PROVIDER_SECRET_HEADER", "X-LLMGuidance-Provider-Secret")
+LLM_GUIDANCE_TIMEOUT_SECONDS = int(os.getenv("LLM_GUIDANCE_TIMEOUT_SECONDS", "30"))
 
 # Delegated JWT settings (Flask-issued token, Alex-verified token).
 ALEX_DELEGATION_ISSUER = os.getenv("ALEX_DELEGATION_ISSUER", "capsico-flask-backend")
@@ -118,6 +139,9 @@ ALEX_SECURITY_AUDIT_LOG_ENABLED = os.getenv("ALEX_SECURITY_AUDIT_LOG_ENABLED", "
     "yes",
 )
 ALEX_SECURITY_AUDIT_HASH_SALT = os.getenv("ALEX_SECURITY_AUDIT_HASH_SALT", "flask-audit-salt")
+
+# Note: ALEX_DELEGATION_* variables are now legacy and unused by the active
+# LLMGuidance exchange flow. They are retained for backward compatibility only.
 
 # Flask Configuration
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "capsico_inference_secret_key_2026")

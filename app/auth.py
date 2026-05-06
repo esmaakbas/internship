@@ -50,8 +50,11 @@ from config import (
     AUTH0_AUDIENCE,
     AUTH0_ROLE_CLAIM,
     AUTH0_ALLOWED_ROLES,
+    LLM_GUIDANCE_PROVIDER_SHARED_SECRET,
+    LLM_GUIDANCE_PROVIDER_SECRET_HEADER,
 )
 from database import get_or_create_user, get_user_by_id
+from database import get_user_by_auth0_sub
 
 
 # Auth0 URLs
@@ -490,6 +493,10 @@ def callback() -> Any:
     else:
         session["token_expires_at"] = time.time() + 3600
 
+    # Store Auth0 ID token server-side for use by LLMGuidance exchange flow.
+    # SECURITY: Never log or expose this token to the frontend.
+    session["auth0_id_token"] = id_token
+
     current_app.logger.info(f"User logged in: {userinfo.get('email')} (ID: {user_id})")
 
     return redirect(url_for("home"))
@@ -719,6 +726,64 @@ def register_auth_routes(app: Flask) -> None:
     def auth_user():
         """Get current user info (for debugging/testing)."""
         return jsonify(g.user)
+
+    @app.route("/internal/llmguidance/verify-auth0-token", methods=["POST"])
+    def llmguidance_verify_auth0_token():
+        """Internal endpoint called by LLMGuidance to verify an Auth0 ID token.
+
+        Expected header: X-LLMGuidance-Provider-Secret (configurable)
+        Body JSON: {"token": "<auth0_id_token>"}
+
+        Returns JSON:
+        {"valid": true, "email": ..., "sub": ..., "display_name": ..., "role": ..., "auth0_role": ...}
+        or
+        {"valid": false, "reason": "..."}
+        """
+        # Verify provider secret header first
+        secret_hdr = request.headers.get(LLM_GUIDANCE_PROVIDER_SECRET_HEADER)
+        if not LLM_GUIDANCE_PROVIDER_SHARED_SECRET:
+            current_app.logger.error("LLMGuidance provider shared secret not configured")
+            return jsonify({"valid": False, "reason": "Provider secret not configured"}), 403
+
+        if not secret_hdr or secret_hdr != LLM_GUIDANCE_PROVIDER_SHARED_SECRET:
+            return jsonify({"valid": False, "reason": "Invalid provider secret"}), 403
+
+        data = request.get_json(silent=True) or {}
+        token = data.get("token")
+        if not token:
+            return jsonify({"valid": False, "reason": "Missing token in request body"}), 400
+
+        # Verify the Auth0 ID token signature and claims
+        try:
+            claims = verify_jwt(token, expected_audience=AUTH0_CLIENT_ID)
+        except AuthError as exc:
+            return jsonify({"valid": False, "reason": str(exc)}), 401
+
+        # Confirm user exists locally and is active
+        auth0_sub = claims.get("sub")
+        if not auth0_sub:
+            return jsonify({"valid": False, "reason": "Missing sub claim"}), 400
+
+        try:
+            user = get_user_by_auth0_sub(auth0_sub)
+        except Exception as exc:
+            current_app.logger.error("DB error while verifying user for LLMGuidance: %s", exc, exc_info=True)
+            return jsonify({"valid": False, "reason": "Database error"}), 500
+
+        if not user:
+            return jsonify({"valid": False, "reason": "User not found"}), 404
+        if not user.get("is_active", True):
+            return jsonify({"valid": False, "reason": "User is deactivated"}), 403
+
+        # Successful verification - return user attributes (not tokens)
+        return jsonify({
+            "valid": True,
+            "email": user.get("email"),
+            "sub": user.get("auth0_sub"),
+            "display_name": user.get("display_name"),
+            "role": user.get("role"),
+            "auth0_role": session.get("auth0_role"),
+        })
 
     # Register before_request handler to load user
     app.before_request(load_user_into_g)

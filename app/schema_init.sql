@@ -28,18 +28,13 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS predictions (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     user_id INT UNSIGNED NULL,
-    status ENUM('pending', 'running', 'success', 'failed') NOT NULL DEFAULT 'pending',
-    input_payload JSON NULL,
-    output_payload JSON NULL,
-    pipeline_version VARCHAR(100) NULL,
-    error_message TEXT NULL,
+  input_json JSON NULL,
+  output_json JSON NULL,
+    model_version VARCHAR(100) NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
-    INDEX idx_predictions_user (user_id),
-    INDEX idx_predictions_status (status),
-    INDEX idx_predictions_created_at (created_at),
+    INDEX idx_predictions_user_created (user_id, created_at),
 
     CONSTRAINT fk_predictions_user
         FOREIGN KEY (user_id)

@@ -289,15 +289,13 @@ if AUTH0_ENABLED:
                     current_user_id = g.user.get("id")
                     is_self_modification = (current_user_id == user_id)
 
+                    # SECURITY: Block users from archiving themselves
+                    if is_self_modification and not next_is_active:
+                        raise ValueError("You cannot deactivate your own account. Ask another administrator for help.")
+
                     updated = set_user_active_status(user_id, next_is_active)
                     if not updated:
                         raise ValueError("User not found for lifecycle update")
-
-                    # SECURITY: If user archived themselves, force logout
-                    if is_self_modification and not next_is_active:
-                        session.clear()
-                        flash("Your account has been archived. Contact an administrator to reactivate.", "info")
-                        return redirect(url_for("auth_login"))
 
                     state_label = "reactivated" if next_is_active else "archived"
                     flash(f"User {state_label} successfully.", "success")
@@ -465,9 +463,11 @@ def predict():
         payload = BASE_PATIENT_PAYLOAD.copy()
         payload.update(overrides)
 
+        # Ensure only authenticated user context is forwarded to Alex when auth is enabled
+        user_ctx = g.user if AUTH0_ENABLED else _resolve_alex_user_context()
         result = perform_inference(
             input_data=payload,
-            user_context=_resolve_alex_user_context(),
+            user_context=user_ctx,
         )
 
         if not result["success"]:
@@ -506,6 +506,11 @@ def predict():
         )
 
     # GET request - legacy backward-compatibility path (subprocess flow)
+    # Only allow legacy flow if authenticated when Auth0 is enabled
+    if AUTH0_ENABLED and (not getattr(g, 'user', None)):
+        # For HTML routes redirect to login (login_required behavior)
+        return redirect(url_for('auth_login'))
+
     result = perform_inference()
 
     if not result["success"]:
@@ -525,9 +530,10 @@ def test_plumber():
     """
     payload = BASE_PATIENT_PAYLOAD.copy()
 
+    user_ctx = g.user if AUTH0_ENABLED else _resolve_alex_user_context()
     result = perform_inference(
         input_data=payload,
-        user_context=_resolve_alex_user_context(),
+        user_context=user_ctx,
     )
 
     if not result["success"]:
@@ -636,14 +642,27 @@ def upload_patient_csv():
 
     row = df.iloc[0]
 
-    # Build prefill dict: only include fields the form actually supports and
-    # that have a non-null value in the CSV row.
-    prefill_data = {}
+    # Build candidate dict from CSV row values for supported fields.
+    candidate_values = {}
     for field in _PREFILL_FIELDS:
         if field in row.index and pd.notna(row[field]):
-            prefill_data[field] = row[field]
+            candidate_values[field] = str(row[field]).strip()
 
-    return render_template("index.html", prefill_data=prefill_data, upload_filename=file.filename)
+    # Reuse existing parser/validator to normalize values and drop invalid ones.
+    overrides, _, errors = parse_patient_form(candidate_values)
+    prefill_data = {key: value for key, value in overrides.items()}
+
+    upload_warnings = []
+    if errors:
+        for field, message in errors.items():
+            upload_warnings.append(f"{field}: {message}")
+
+    return render_template(
+        "index.html",
+        prefill_data=prefill_data,
+        upload_filename=file.filename,
+        upload_warnings=upload_warnings,
+    )
 
 
 @app.route("/test-alex-ui")
@@ -733,6 +752,22 @@ def test_alex_ui_error():
         patient_data=mock_patient_data,
         prediction_id=None,
     )
+
+
+# Apply authentication decorators to inference/guidance routes when Auth0 is enabled
+if AUTH0_ENABLED:
+    # auth is imported only when AUTH0_ENABLED is True earlier in this module
+    # Replace Flask view functions in the app's routing map so the wrapper is
+    # used for all HTTP methods (decorating the function after route
+    # registration requires updating app.view_functions).
+    if 'predict' in app.view_functions:
+        app.view_functions['predict'] = auth.login_required(app.view_functions['predict'])
+    if 'test_plumber' in app.view_functions:
+        app.view_functions['test_plumber'] = auth.login_required(app.view_functions['test_plumber'])
+    if 'test_alex_ui' in app.view_functions:
+        app.view_functions['test_alex_ui'] = auth.login_required(app.view_functions['test_alex_ui'])
+    if 'test_alex_ui_error' in app.view_functions:
+        app.view_functions['test_alex_ui_error'] = auth.login_required(app.view_functions['test_alex_ui_error'])
 
 
 @app.route('/debug/db-check')

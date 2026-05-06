@@ -88,23 +88,50 @@ def _get_alex_guidance(patient_payload: dict, inference_result: dict, user_conte
         # Lazy imports to avoid issues if these modules have problems
         from services.alex_payload_mapper import build_alex_guidance_payload
         from clients.alex_client import request_guidance
+        from flask import session
 
         logger.info("Requesting Alex LLM guidance for inference result")
 
         # Build Alex payload from patient data and inference result
         alex_payload = build_alex_guidance_payload(patient_payload, inference_result)
 
-        # Request guidance from Alex's API
+        # Read Auth0 ID token from server-side session (never from frontend)
+        auth0_id_token = None
+        try:
+            auth0_id_token = session.get("auth0_id_token")
+        except Exception:
+            auth0_id_token = None
+
+        # Security: if Auth0 is enabled, fail closed if no server-side ID token
+        from config import AUTH0_ENABLED
+        if AUTH0_ENABLED and not auth0_id_token:
+            logger.error("Auth0 enabled but server-side ID token missing; skipping Alex guidance")
+            return {
+                "ok": False,
+                "request_id": alex_payload.get("request_id"),
+                "status": "error",
+                "answer": None,
+                "model": None,
+                "warnings": [],
+                "metadata": {},
+                "verification": None,
+                "rag": [],
+                "error": {"code": "MISSING_SERVER_ID_TOKEN", "message": "Server-side Auth0 ID token missing"},
+                "raw": {},
+            }
+
+        # Request guidance from Alex's API (LLMGuidance exchange flow)
         guidance_response = request_guidance(
             question=alex_payload["question"],
             patient_variables=alex_payload["patient_variables"],
             request_id=alex_payload["request_id"],
             options=alex_payload["options"],
             user_context=user_context,
+            auth0_id_token=auth0_id_token,
         )
 
-        if guidance_response["ok"]:
-            logger.info(f"Alex guidance succeeded (request_id={guidance_response['request_id']})")
+        if guidance_response.get("ok"):
+            logger.info(f"Alex guidance succeeded (request_id={guidance_response.get('request_id')})")
         else:
             logger.warning(f"Alex guidance failed: {guidance_response.get('error', {}).get('message', 'Unknown error')}")
 
