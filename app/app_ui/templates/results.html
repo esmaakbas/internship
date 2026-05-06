@@ -226,11 +226,12 @@
         </ul>
         <div class="d-flex align-items-center mb-2" style="gap: 8px;">
             {% if prediction_id %}
-            <form method="post" action="{{ url_for('history.generate_prediction_report', prediction_id=prediction_id) }}" class="mb-0">
-                <button type="submit" class="btn btn-outline-secondary btn-sm" style="font-size: 0.8rem; padding: 4px 12px;">
-                    <i class="fas fa-file-pdf mr-1"></i> Export as PDF
-                </button>
-            </form>
+            <a href="{{ url_for('history.generate_prediction_report', prediction_id=prediction_id) }}" target="_blank" class="btn btn-outline-secondary btn-sm" style="font-size: 0.8rem; padding: 4px 12px;">
+                <i class="fas fa-eye mr-1"></i> View PDF
+            </a>
+            <a href="{{ url_for('history.generate_prediction_report', prediction_id=prediction_id, download=1) }}" class="btn btn-outline-danger btn-sm" style="font-size: 0.8rem; padding: 4px 12px;">
+                <i class="fas fa-file-pdf mr-1"></i> Download PDF
+            </a>
             {% endif %}
             <a href="/" class="btn btn-primary btn-sm" style="font-size: 0.8rem; padding: 4px 12px;"><i class="fas fa-redo mr-1"></i> New Analysis</a>
         </div>
@@ -358,11 +359,12 @@
                                     <i class="fas fa-redo mr-2"></i>New Analysis
                                 </a>
                                 {% if prediction_id %}
-                                <form method="post" action="{{ url_for('history.generate_prediction_report', prediction_id=prediction_id) }}" class="mb-0">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" style="text-align: left; width: 100%;">
-                                        <i class="fas fa-file-pdf mr-2"></i>Export as PDF
-                                    </button>
-                                </form>
+                                <a href="{{ url_for('history.generate_prediction_report', prediction_id=prediction_id) }}" target="_blank" class="btn btn-sm btn-outline-secondary" style="text-align: left;">
+                                    <i class="fas fa-eye mr-2"></i>View PDF
+                                </a>
+                                <a href="{{ url_for('history.generate_prediction_report', prediction_id=prediction_id, download=1) }}" class="btn btn-sm btn-outline-danger" style="text-align: left;">
+                                    <i class="fas fa-file-pdf mr-2"></i>Download PDF
+                                </a>
                                 <a href="{{ url_for('history.history_detail', prediction_id=prediction_id) }}" class="btn btn-sm btn-outline-secondary" style="text-align: left;">
                                     <i class="fas fa-folder-open mr-2"></i>View Saved Result
                                 </a>
@@ -909,6 +911,16 @@
                             ({{ alex_guidance.error.code }})
                             {% endif %}
                         </p>
+                        {% if alex_guidance.error.details %}
+                        <p class="mb-0 mt-1" style="font-size: 0.8rem; color: #6c757d;">
+                            {% if alex_guidance.error.details.http_status %}
+                            HTTP: {{ alex_guidance.error.details.http_status }}
+                            {% endif %}
+                            {% if alex_guidance.error.details.delegation_kid %}
+                            | Delegation KID: {{ alex_guidance.error.details.delegation_kid }}
+                            {% endif %}
+                        </p>
+                        {% endif %}
                         {% endif %}
                     </div>
                     {% endif %}

@@ -13,6 +13,8 @@ A Python-based application for running inference predictions using the Capsico R
 - **Web Interface**: Flask-based UI for uploading patient data and viewing predictions
 - **R Pipeline Integration**: Automated execution of R scripts for inference
 - **Plumber API Client**: Integration with R Plumber API for predictions
+- **Prediction History**: Authenticated users can browse and filter prior predictions
+- **PDF Export**: Per-prediction and filtered bulk export of reports
 - **CSV Processing**: Upload and process patient data in CSV format
 - **Form Validation**: Built-in patient form parser and validators
 - **Automatic Configuration**: Auto-detects R installation and script paths
@@ -74,9 +76,16 @@ R_SCRIPT_PATH=path\to\Capsico_mini_v2\step_inference_mini_both.R
 # Plumber API
 PLUMBER_API_URL=http://localhost:8000
 
-# Alex Guidance API
-ALEX_GUIDANCE_URL=http://localhost:8000/guidance/generate
-ALEX_TIMEOUT_SECONDS=30
+# LLMGuidance public API gateway (ACTIVE)
+# Dashboard should use these values for the exchange-based flow:
+LLM_GUIDANCE_API_URL=http://localhost:8000
+LLM_GUIDANCE_AUTH_EXCHANGE_URL=http://localhost:8000/auth/exchange
+LLM_GUIDANCE_JOBS_URL=http://localhost:8000/guidance/jobs
+LLM_GUIDANCE_TIMEOUT_SECONDS=30
+
+# Legacy Alex direct URL (LEGACY - DO NOT CALL DIRECTLY):
+# Keep empty to avoid calling the internal Alex service on port 8001.
+ALEX_GUIDANCE_URL=
 
 # Delegated JWT (Flask signs, Alex verifies)
 ALEX_DELEGATION_ISSUER=capsico-flask-backend
@@ -92,6 +101,11 @@ FLASK_DEBUG=True
 FLASK_PORT=8080
 FLASK_HOST=127.0.0.1
 ```
+
+**Port note:**
+
+- Port 8000 = LLMGuidance public API gateway used by the Dashboard (ACTIVE).
+- Port 8001 = internal Alex service (LEGACY). The Dashboard must not call port 8001 directly; use the `LLM_GUIDANCE_*` exchange flow instead.
 
 **Note**: The application will auto-detect R installation if not specified.
 
@@ -170,8 +184,11 @@ This will display the current configuration including detected R paths.
 ### Flask Web Interface
 
 - `GET /` - Main upload form
-- `POST /predict` - Upload CSV and get predictions
-- `GET /results` - View prediction results
+- `POST /predict` - Submit patient form and run prediction
+- `GET /history` - Paginated prediction history with filters
+- `GET /history/<prediction_id>` - View one saved prediction in detail
+- `POST /history/<prediction_id>/pdf` - Generate/download PDF for one prediction
+- `POST /history/export/pdf` - Export filtered history as a combined PDF
 
 ### Plumber API Integration
 
@@ -192,6 +209,7 @@ Results are generated in CSV format and saved to the `outputs/` directory:
 2. **Script not found**: Set `R_SCRIPT_PATH` to point to your `step_inference_mini_both.R` file
 3. **Import errors**: Activate virtual environment and reinstall dependencies
 4. **Port conflicts**: Change `FLASK_PORT` in `.env` or environment variables
+5. **WeasyPrint PDF errors on Windows**: Install GTK/Pango/Cairo runtime libraries required by WeasyPrint, then restart your terminal/session
 
 ## Development
 

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Capsico Prediction Report</title>
+<style>
+@page {
+    size: A4;
+    margin: 14mm;
+}
+
+body {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 11px;
+    color: #1f2937;
+    line-height: 1.5;
+    text-align: left;
+}
+
+h1, h2, h3 {
+    margin: 0;
+}
+
+h1 {
+    font-size: 22px;
+    color: #0f766e;
+}
+
+h2 {
+    font-size: 15px;
+    color: #0f766e;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 4px;
+}
+
+.section {
+    page-break-before: always;
+}
+
+/* Allow sections to opt-out from page break */
+.section.no-break {
+    page-break-before: avoid;
+}
+
+.section:first-of-type {
+    page-break-before: avoid;
+}
+
+.header {
+    margin-bottom: 14px;
+}
+
+.meta {
+    font-size: 9px;
+    color: #6b7280;
+    margin-top: 8px;
+    background: #f8fafc;
+    border-radius: 6px;
+    padding: 6px 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.meta-label {
+    color: #4b5563;
+    font-weight: 700;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 6px;
+    table-layout: fixed;
+}
+
+th, td {
+    border: 1px solid #e5e7eb;
+    padding: 7px;
+    word-wrap: break-word;
+    vertical-align: middle;
+}
+
+th {
+    background: #f9fafb;
+    font-weight: 600;
+    text-align: left;
+}
+
+.summary-stack {
+    margin-top: 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.summary-item {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+}
+
+.summary-item-label {
+    background: #f9fafb;
+    color: #6b7280;
+    font-size: 10px;
+    padding: 7px 10px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.summary-item-value {
+    color: #111827;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 9px 10px;
+}
+
+.box {
+    border: 1px solid #e5e7eb;
+    padding: 8px;
+    margin-top: 8px;
+    border-radius: 4px;
+    text-align: left;
+}
+
+td {
+    text-align: center;
+}
+
+.patient-table td {
+    font-size: 10px;
+}
+
+.patient-field {
+    background: #f9fafb;
+    font-weight: bold;
+    width: 20%;
+}
+
+.patient-value {
+    width: 30%;
+}
+
+.pre {
+    white-space: pre-wrap;
+}
+
+.small-note {
+    font-size: 9px;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+/* Prevent row splitting across pages */
+tr {
+    page-break-inside: avoid;
+}
+
+.table-caption {
+    margin-top: 6px;
+    font-size: 9px;
+    color: #6b7280;
+}
+
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Capsico Prediction Report</h1>
+    <div class="meta">
+        Generated: {{ generated_at.strftime('%Y-%m-%d %H:%M:%S UTC') }} | Prediction ID: #{{ prediction.id }} | Patient ID: {{ prediction.patient_id or '-' }} | Model: {{ prediction.model_version or '-' }} | Created: {{ prediction.created_at.strftime('%Y-%m-%d %H:%M:%S') if prediction.created_at else '-' }}
+    </div>
+</div>
+
+<div class="section no-break">
+    <h2>Overview</h2>
+
+    {% set summary = decision_summary or {} %}
+
+    <div class="summary-stack">
+        <div class="summary-item">
+            <div class="summary-item-label">Primary Recommendation</div>
+            <div class="summary-item-value">{{ summary.get('primary_recommendation', {}).get('Drug', 'None') }}</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-item-label">Confidence</div>
+            <div class="summary-item-value">{{ summary.get('decision_confidence', '-') }}</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-item-label">Status</div>
+            <div class="summary-item-value">{{ summary.get('decision_reason', '-') }}</div>
+        </div>
+    </div>
+
+    <div class="box">
+        <strong>Clinical Message:</strong><br>
+        {{ summary.get('clinical_message', '-') }}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Treatment</th>
+                <th>Tau</th>
+                <th>CI Low</th>
+                <th>CI High</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            <tr>
+                <td>{{ row.get('Drug', '-') }}</td>
+                <td>{{ row.get('Tau_Point', '-') }}</td>
+                <td>{{ row.get('CI_Low', '-') }}</td>
+                <td>{{ row.get('CI_High', '-') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="table-caption">Overview treatment snapshot across all candidate therapies.</div>
+</div>
+
+<div class="section">
+    <h2>Patient Data</h2>
+
+    {% set patient_pairs = patient_data.items()|list|batch(2, None) %}
+
+    <table class="patient-table">
+        <thead>
+            <tr>
+                <th style="width:20%">Field</th>
+                <th style="width:30%">Value</th>
+                <th style="width:20%">Field</th>
+                <th style="width:30%">Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pair in patient_pairs %}
+            {% set left = pair[0] %}
+            {% set right = pair[1] %}
+            <tr>
+                <td class="patient-field">{{ left[0] if left else '-' }}</td>
+                <td class="patient-value">{{ left[1] if left else '-' }}</td>
+                <td class="patient-field">{{ right[0] if right else '-' }}</td>
+                <td class="patient-value">{{ right[1] if right else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="small-note">Two-column layout for faster clinical scanning.</div>
+</div>
+
+<div class="section">
+    <h2>ML Model Details</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Treatment</th>
+                <th>Tau</th>
+                <th>CI Low</th>
+                <th>CI High</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            {% set tau = row.get('Tau_Point') %}
+            {% set ci_high = row.get('CI_High') %}
+            <tr>
+                <td>{{ row.get('Drug', '-') }}</td>
+                <td>{{ tau if tau is not none else '-' }}</td>
+                <td>{{ row.get('CI_Low', '-') }}</td>
+                <td>{{ ci_high if ci_high is not none else '-' }}</td>
+                <td>
+                    {% if tau is none %}No Data
+                    {% elif tau < 0 and ci_high is not none and ci_high < 0 %}Strong Benefit
+                    {% elif tau < 0 %}Possible Benefit
+                    {% else %}No Benefit
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="box">
+        <strong>Notes:</strong><br>
+        Tau = treatment effect (negative = beneficial)<br>
+        CI High < 0 indicates statistical significance
+    </div>
+</div>
+
+<div class="section">
+    <h2>LLM Guidance</h2>
+
+    {% if alex_guidance and alex_guidance.get('answer') %}
+    <div class="box pre">{{ alex_guidance.get('answer') }}</div>
+    {% else %}
+    <div class="small-note">No LLM explanation available.</div>
+    {% endif %}
+</div>
+
+</body>
+</html>

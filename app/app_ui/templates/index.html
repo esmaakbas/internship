@@ -89,6 +89,17 @@
     </div>
     {% endif %}
 
+    {% if upload_warnings %}
+    <div class="alert alert-warning" role="alert">
+        <h6 class="alert-heading mb-2"><i class="fas fa-exclamation-circle"></i> Some CSV values were skipped</h6>
+        <ul class="mb-0">
+            {% for warning in upload_warnings %}
+            <li>{{ warning }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
     {% if form_errors %}
     <div class="alert alert-danger" role="alert">
         <h6 class="alert-heading mb-2"><i class="fas fa-exclamation-triangle"></i> Please fix the following errors before running inference:</h6>
@@ -101,7 +112,7 @@
     {% endif %}
 
     <!-- Patient Input Form (submits to /predict) -->
-    <form action="/predict" method="POST">
+    <form id="predictionForm" action="/predict" method="POST">
 
         <!-- Patient Information -->
         <div class="card shadow-sm mb-4">

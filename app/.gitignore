@@ -53,6 +53,7 @@ logs/
 # Outputs (keep directory, ignore contents)
 outputs/*.csv
 outputs/*.json
+outputs/pdf_reports/
 !outputs/.gitkeep
 
 # Inputs (uploaded files)

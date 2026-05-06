@@ -597,7 +597,10 @@
                                         <input type="hidden" name="action" value="toggle_active">
                                         <input type="hidden" name="user_id" value="{{ row.id }}">
                                         <input type="hidden" name="next_is_active" value="0">
-                                        <button type="submit" class="mini-icon-btn mini-icon-btn-archive" title="Archive user">
+                                        <button type="submit"
+                                                class="mini-icon-btn mini-icon-btn-archive"
+                                                title="{% if user and user.id == row.id %}You cannot archive your own account{% else %}Archive user{% endif %}"
+                                                {% if user and user.id == row.id %}disabled aria-disabled="true"{% endif %}>
                                             <i class="fas fa-archive"></i>
                                         </button>
                                     </form>
