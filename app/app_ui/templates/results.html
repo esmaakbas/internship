@@ -245,7 +245,7 @@
         <div class="tab-pane fade show active" id="overview" role="tabpanel">
             <div class="row">
                 <!-- Evidence Snapshot (Left) -->
-                <div class="col-lg-5">
+                <div class="col-lg-4">
                     <div class="card h-100 mb-4">
                         <div class="card-header" style="background: #0090A5; border-bottom: 2px solid #E73C0D; padding: 14px 18px;">
                             <strong style="color: white; font-size: 1.05rem;">Evidence Snapshot</strong>
@@ -290,8 +290,8 @@
                     </div>
                 </div>
 
-                <!-- Treatment Quick View (Right) -->
-                <div class="col-lg-7">
+                <!-- Treatment Quick View (Middle) -->
+                <div class="col-lg-4">
                     <div class="card h-100 mb-4">
                         <div class="card-header" style="background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
                             <strong>Treatment Quick View</strong>
@@ -326,6 +326,27 @@
                                     {% endfor %}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Digital Twin preview (Right) -->
+                <div class="col-lg-4">
+                    <div class="card h-100 mb-4">
+                        <div class="card-header d-flex align-items-center"
+                            style="background:#0090A5; border-bottom:2px solid #E73C0D;">
+                                    
+                            <strong class="text-white" style="font-size:1.05rem;">Digital Twin</strong>
+
+                            <a id="view-full-link" class="dt-link">View full →</a>
+                        </div>
+                        <div class="card-body" style="padding: 0px;">
+                            <div id="results-preview-wrapper">
+                                <div id="results-preview"></div>
+                                <div id="preview-overlay">
+                                    Go to Digital Twin
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1034,7 +1055,10 @@
                         </div>
 
                         <div class="attribution">
-                            BodyParts3D, © The Database Center for Life Science, licensed under CC BY 4.0
+                            <span class="attr-icon">© BP3D</span>
+                            <div class="attr-tooltip">
+                                BodyParts3D, © The Database Center for Life Science, licensed under CC BY 4.0
+                            </div>
                         </div>
                         
                     </div>
@@ -1072,8 +1096,8 @@
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script id="results-data" type="application/json">{{ data | tojson }}</script>
-<script type="module" src="{{ url_for('static', filename='digital_twin/assets/index-BiKErHdF.js') }}"></script>
-<script>
+<script type="module" src="{{ url_for('static', filename='digital_twin/assets/main-NZbGvn1k.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='digital_twin/assets/preview-DVGWNkMR.js') }}"></script><script>
 (function () {
     const rawDataNode = document.getElementById('results-data');
     if (!rawDataNode) return;
