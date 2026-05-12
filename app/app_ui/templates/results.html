@@ -291,7 +291,7 @@
                 </div>
 
                 <!-- Treatment Quick View (Middle) -->
-                <div class="col-lg-4">
+                <div class="col-lg-5">
                     <div class="card h-100 mb-4">
                         <div class="card-header" style="background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
                             <strong>Treatment Quick View</strong>
@@ -331,7 +331,7 @@
                 </div>
 
                 <!-- Digital Twin preview (Right) -->
-                <div class="col-lg-4">
+                <div class="col-lg-3">
                     <div class="card h-100 mb-4">
                         <div class="card-header d-flex align-items-center"
                             style="background:#0090A5; border-bottom:2px solid #E73C0D;">
@@ -720,7 +720,7 @@
                 </div>
                 <div class="card-body">
                     <p class="text-muted mb-3" style="font-size: 0.88rem;">
-                        Each point shows the treatment effect estimate (Tau). The line extends to the confidence interval upper bound.
+                        Each point shows the treatment effect estimate (Effect). The line extends to the confidence interval (Confidence Level).
                         Values below zero indicate beneficial effect.
                     </p>
                     <div style="position: relative; height: 320px;">
@@ -755,8 +755,8 @@
                             <thead style="background: #495057; color: white;">
                                 <tr>
                                     <th style="padding: 14px 16px;">Treatment</th>
-                                    <th style="padding: 14px 16px;">Tau (Effect)</th>
-                                    <th style="padding: 14px 16px;">Upper Confidence Bound</th>
+                                    <th style="padding: 14px 16px;">Effect</th>
+                                    <th style="padding: 14px 16px;">Confidence Level</th>
                                     <th style="padding: 14px 16px;">Status</th>
                                 </tr>
                             </thead>
@@ -803,11 +803,11 @@
                     <h6 class="mb-2" style="color: #495057;">Statistical Notes</h6>
                     <div class="row" style="font-size: 0.88rem; color: #666;">
                         <div class="col-md-4">
-                            <strong>Tau (Treatment Effect):</strong><br>
+                            <strong>Effect:</strong><br>
                             Estimated individual treatment effect. Negative = beneficial.
                         </div>
                         <div class="col-md-6">
-                            <strong>Upper Confidence Bound:</strong><br>
+                            <strong>Confidence Level:</strong><br>
                             One-sided 90% confidence interval upper bound. If &lt; 0, effect is statistically significant.
                         </div>
                         <div class="col-md-6">
@@ -1176,7 +1176,7 @@
                         grid: { display: false }
                     },
                     y: {
-                        title: { display: true, text: 'Treatment Effect (Tau)', font: { weight: 'bold' } },
+                        title: { display: true, text: 'Effect', font: { weight: 'bold' } },
                         grid: { color: '#eee' }
                     }
                 },
@@ -1193,7 +1193,7 @@
                                 const best = item.dataIndex === bestIdx ? ' (Recommended)' : '';
                                 return [
                                     'Effect: ' + d.tau.toFixed(4) + best,
-                                    'Upper Confidence Bound: ' + d.ciHigh.toFixed(4)
+                                    'Confidence Level: ' + d.ciHigh.toFixed(4)
                                 ];
                             }
                         }
