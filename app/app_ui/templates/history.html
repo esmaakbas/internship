@@ -251,7 +251,7 @@
         <div class="history-card-body">
             <form method="get" action="{{ url_for('history.history_index') }}">
                 <div class="form-row filters-grid">
-                    <div class="form-group col-md-2">
+                    <div class="form-group col-md-3">
                         <label class="small text-muted">Per Page</label>
                         <select class="form-control" name="limit">
                             <option value="10" {% if active_filters.limit == '10' %}selected{% endif %}>10</option>
@@ -267,7 +267,7 @@
                         <label class="small text-muted">To</label>
                         <input type="date" class="form-control" name="date_to" value="{{ active_filters.date_to }}">
                     </div>
-                    <div class="form-group col-md-4">
+                    <div class="form-group col-md-3">
                         <label class="small text-muted">Search</label>
                         <input type="text" class="form-control" name="search" value="{{ active_filters.search }}" placeholder="Patient ID or Prediction ID">
                     </div>
@@ -313,8 +313,8 @@
                                     <a class="mini-action-btn mini-action-btn-pdf" href="{{ url_for('history.generate_prediction_report', prediction_id=prediction.id, download=1) }}">
                                         <i class="fas fa-file-pdf"></i> Download PDF
                                     </a>
-                                    <form method="post" action="{{ url_for('history.delete_prediction', prediction_id=prediction.id) }}" class="d-inline mb-0" onsubmit="return confirm('Delete prediction #{{ prediction.id }}? This cannot be undone.');">
-                                        <button type="submit" class="mini-action-btn mini-action-btn-delete">
+                                    <form method="post" action="{{ url_for('history.delete_prediction', prediction_id=prediction.id) }}" class="d-inline mb-0 delete-prediction-form">
+                                        <button type="button" class="mini-action-btn mini-action-btn-delete js-open-delete-modal" data-prediction-id="{{ prediction.id }}">
                                             <i class="fas fa-trash-alt"></i> Delete
                                         </button>
                                     </form>
@@ -360,4 +360,52 @@
         </div>
     </div>
 </div>
+            <!-- Delete confirmation modal -->
+            <div class="modal fade" id="deletePredictionModal" tabindex="-1" role="dialog" aria-labelledby="deletePredictionModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deletePredictionModalLabel">Confirm Delete</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Delete prediction <strong id="deletePredictionIdDisplay"></strong>? This action cannot be undone.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-danger" id="confirmDeletePredictionBtn">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 {% endblock %}
+
+            {% block extra_scripts %}
+            <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var targetForm = null;
+                var predictionIdDisplay = document.getElementById('deletePredictionIdDisplay');
+                var confirmBtn = document.getElementById('confirmDeletePredictionBtn');
+
+                document.querySelectorAll('.js-open-delete-modal').forEach(function(btn) {
+                    btn.addEventListener('click', function () {
+                        var form = btn.closest('form');
+                        targetForm = form;
+                        var pid = btn.getAttribute('data-prediction-id');
+                        if (predictionIdDisplay) predictionIdDisplay.textContent = '#' + pid;
+                        $('#deletePredictionModal').modal('show');
+                    });
+                });
+
+                if (confirmBtn) {
+                    confirmBtn.addEventListener('click', function () {
+                        if (targetForm) {
+                            targetForm.submit();
+                        }
+                    });
+                }
+            });
+            </script>
+            {% endblock %}

@@ -206,8 +206,7 @@ tr {
             <tr>
                 <th>Treatment</th>
                 <th>Tau</th>
-                <th>CI Low</th>
-                <th>CI High</th>
+                <th>Upper Confidence Bound</th>
             </tr>
         </thead>
         <tbody>
@@ -215,7 +214,6 @@ tr {
             <tr>
                 <td>{{ row.get('Drug', '-') }}</td>
                 <td>{{ row.get('Tau_Point', '-') }}</td>
-                <td>{{ row.get('CI_Low', '-') }}</td>
                 <td>{{ row.get('CI_High', '-') }}</td>
             </tr>
             {% endfor %}
@@ -227,7 +225,7 @@ tr {
 <div class="section">
     <h2>Patient Data</h2>
 
-    {% set patient_pairs = patient_data.items()|list|batch(2, None) %}
+    {% set provided = patient_data.get('_provided_fields') if patient_data else None %}
 
     <table class="patient-table">
         <thead>
@@ -239,16 +237,28 @@ tr {
             </tr>
         </thead>
         <tbody>
-            {% for pair in patient_pairs %}
-            {% set left = pair[0] %}
-            {% set right = pair[1] %}
-            <tr>
-                <td class="patient-field">{{ left[0] if left else '-' }}</td>
-                <td class="patient-value">{{ left[1] if left else '-' }}</td>
-                <td class="patient-field">{{ right[0] if right else '-' }}</td>
-                <td class="patient-value">{{ right[1] if right else '-' }}</td>
-            </tr>
-            {% endfor %}
+            {% if provided %}
+                {% for key in provided %}
+                <tr>
+                    <td class="patient-field">{{ key }}</td>
+                    <td class="patient-value">{{ patient_data.get(key, '-') }}</td>
+                    <td class="patient-field">&nbsp;</td>
+                    <td class="patient-value">&nbsp;</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                {% set patient_pairs = patient_data.items()|list|batch(2, None) %}
+                {% for pair in patient_pairs %}
+                {% set left = pair[0] %}
+                {% set right = pair[1] %}
+                <tr>
+                    <td class="patient-field">{{ left[0] if left else '-' }}</td>
+                    <td class="patient-value">{{ left[1] if left else '-' }}</td>
+                    <td class="patient-field">{{ right[0] if right else '-' }}</td>
+                    <td class="patient-value">{{ right[1] if right else '-' }}</td>
+                </tr>
+                {% endfor %}
+            {% endif %}
         </tbody>
     </table>
 
@@ -263,8 +273,7 @@ tr {
             <tr>
                 <th>Treatment</th>
                 <th>Tau</th>
-                <th>CI Low</th>
-                <th>CI High</th>
+                <th>Upper Confidence Bound</th>
                 <th>Status</th>
             </tr>
         </thead>
@@ -275,7 +284,6 @@ tr {
             <tr>
                 <td>{{ row.get('Drug', '-') }}</td>
                 <td>{{ tau if tau is not none else '-' }}</td>
-                <td>{{ row.get('CI_Low', '-') }}</td>
                 <td>{{ ci_high if ci_high is not none else '-' }}</td>
                 <td>
                     {% if tau is none %}No Data

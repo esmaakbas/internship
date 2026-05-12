@@ -44,6 +44,7 @@
                     <h4 class="mb-0 text-white"><i class="fas fa-user mr-2"></i> User Profile</h4>
                 </div>
                 <div class="card-body" style="padding: 24px 28px;">
+                    {% if user.role|lower == 'admin' %}
                     <div class="profile-info-row">
                         <div class="row">
                             <div class="col-md-4">
@@ -54,6 +55,7 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
 
                     <div class="profile-info-row">
                         <div class="row">
@@ -96,6 +98,7 @@
                         </div>
                     </div>
 
+                    {% if user.role|lower == 'admin' %}
                     <div class="profile-info-row">
                         <div class="row">
                             <div class="col-md-4">
@@ -106,6 +109,7 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
 
                     <div class="profile-info-row">
                         <div class="row">
@@ -126,6 +130,7 @@
                         </div>
                     </div>
 
+                    {% if user.role|lower == 'admin' %}
                     <div class="profile-info-row">
                         <div class="row">
                             <div class="col-md-4">
@@ -136,6 +141,7 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
 
                     <div class="alert mt-4" style="background: #f8f9fa; border: 1px solid #dee2e6; border-left: 3px solid #0090A5; display: flex; align-items: center; font-size: 13px;">
                         <i class="fas fa-info-circle mr-2" style="color: #0090A5;"></i>

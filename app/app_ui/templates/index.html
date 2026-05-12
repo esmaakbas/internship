@@ -749,14 +749,17 @@
 </div>
 
 <script>
-document.getElementById('runInferenceBtn').closest('form').addEventListener('submit', function () {
-    var btn = document.getElementById('runInferenceBtn');
-    var defaultLabel = document.getElementById('btnDefault');
-    var loadingLabel = document.getElementById('btnLoading');
-    defaultLabel.style.display = 'none';
-    loadingLabel.style.display = 'inline';
-    btn.disabled = true;
-});
+var _predForm = document.getElementById('predictionForm');
+if (_predForm) {
+    _predForm.addEventListener('submit', function () {
+        var btn = document.getElementById('runInferenceBtn');
+        var defaultLabel = document.getElementById('btnDefault');
+        var loadingLabel = document.getElementById('btnLoading');
+        if (defaultLabel) defaultLabel.style.display = 'none';
+        if (loadingLabel) loadingLabel.style.display = 'inline';
+        if (btn) btn.disabled = true;
+    });
+}
 
 // Handle collapse button text toggle
 document.querySelectorAll('.section-collapse-btn').forEach(function(btn) {
