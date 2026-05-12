@@ -28,12 +28,25 @@
                 <div class="card-body p-0">
                     <table class="table table-sm mb-0">
                         <tbody>
-                            {% for key, value in prediction.input_json.items() %}
-                            <tr>
-                                <th style="width: 45%;">{{ key }}</th>
-                                <td>{{ value }}</td>
-                            </tr>
-                            {% endfor %}
+                            {% set provided = prediction.input_json.get('_provided_fields') %}
+                            {% if provided %}
+                                {% for key in provided %}
+                                <tr>
+                                    <th style="width: 45%">{{ key }}</th>
+                                    <td>{{ prediction.input_json.get(key) }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                {% for key, value in prediction.input_json.items() %}
+                                    {% if key == '_provided_fields' %}
+                                        {% continue %}
+                                    {% endif %}
+                                <tr>
+                                    <th style="width: 45%">{{ key }}</th>
+                                    <td>{{ value }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>
@@ -68,8 +81,7 @@
                         <tr>
                             <th>Drug</th>
                             <th>Tau Point</th>
-                            <th>CI Low</th>
-                            <th>CI High</th>
+                            <th>Upper Confidence Bound</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -78,7 +90,6 @@
                             <tr>
                                 <td>{{ row.get('Drug', '-') }}</td>
                                 <td>{{ row.get('Tau_Point', '-') }}</td>
-                                <td>{{ row.get('CI_Low', '-') }}</td>
                                 <td>{{ row.get('CI_High', '-') }}</td>
                             </tr>
                             {% endfor %}

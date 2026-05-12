@@ -373,19 +373,10 @@
                                 <a href="#patient" onclick="document.getElementById('patient-tab').click(); return false;" class="btn btn-sm btn-outline-secondary" style="text-align: left;">
                                     <i class="fas fa-user-injured mr-2"></i>View Patient Data
                                 </a>
-                                <a href="#model" onclick="document.getElementById('model-tab').click(); return false;" class="btn btn-sm btn-outline-secondary" style="text-align: left;">
-                                    <i class="fas fa-chart-line mr-2"></i>View Model Details
-                                </a>
                                 <a href="/" class="btn btn-sm btn-outline-primary" style="text-align: left;">
                                     <i class="fas fa-redo mr-2"></i>New Analysis
                                 </a>
                                 {% if prediction_id %}
-                                <a href="{{ url_for('history.generate_prediction_report', prediction_id=prediction_id) }}" target="_blank" class="btn btn-sm btn-outline-secondary" style="text-align: left;">
-                                    <i class="fas fa-eye mr-2"></i>View PDF
-                                </a>
-                                <a href="{{ url_for('history.generate_prediction_report', prediction_id=prediction_id, download=1) }}" class="btn btn-sm btn-outline-danger" style="text-align: left;">
-                                    <i class="fas fa-file-pdf mr-2"></i>Download PDF
-                                </a>
                                 <a href="{{ url_for('history.history_detail', prediction_id=prediction_id) }}" class="btn btn-sm btn-outline-secondary" style="text-align: left;">
                                     <i class="fas fa-folder-open mr-2"></i>View Saved Result
                                 </a>
@@ -409,7 +400,8 @@
              TAB 2: PATIENT DATA
              ═══════════════════════════════════════════════════════════════════════ -->
         <div class="tab-pane fade" id="patient" role="tabpanel">
-            {% if patient_data %}
+            {% set display = patient_display if (patient_display is defined and patient_display) else patient_data %}
+            {% if display %}
             <div class="row">
                 <!-- Column 1: Patient Info, Vital Signs, Laboratory Values -->
                 <div class="col-md-4">
@@ -417,15 +409,15 @@
                         <h6><i class="fas fa-user mr-2"></i>Patient Information</h6>
                         <div class="patient-data-item">
                             <span class="label">Patient ID</span>
-                            <span class="value">{{ patient_data.get('patientid', '-') }}</span>
+                            <span class="value">{{ display.get('patientid', '-') }}</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">Age</span>
-                            <span class="value">{{ patient_data.get('age', '-') }} years</span>
+                            <span class="value">{{ display.get('age', '-') }} years</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">Sex</span>
-                            <span class="value">{{ 'Female' if patient_data.get('sex') == 0 else 'Male' }}</span>
+                            <span class="value">{{ 'Female' if display.get('sex') == 0 else 'Male' }}</span>
                         </div>
                     </div>
 
@@ -433,19 +425,19 @@
                         <h6><i class="fas fa-heartbeat mr-2"></i>Vital Signs</h6>
                         <div class="patient-data-item">
                             <span class="label">Blood Pressure</span>
-                            <span class="value">{{ patient_data.get('baseline_sbp', '-') }}/{{ patient_data.get('baseline_dpb', '-') }} mmHg</span>
+                            <span class="value">{{ display.get('baseline_sbp', '-') }}/{{ display.get('baseline_dpb', '-') }} mmHg</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">Heart Rate</span>
-                            <span class="value">{{ patient_data.get('baseline_hr', '-') }} bpm</span>
+                            <span class="value">{{ display.get('baseline_hr', '-') }} bpm</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">Body Weight</span>
-                            <span class="value">{{ patient_data.get('baseline_bw', '-') }} kg</span>
+                            <span class="value">{{ display.get('baseline_bw', '-') }} kg</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">BMI</span>
-                            <span class="value">{{ patient_data.get('baseline_bmi', '-') }} kg/m²</span>
+                            <span class="value">{{ display.get('baseline_bmi', '-') }} kg/m²</span>
                         </div>
                     </div>
 
@@ -453,67 +445,67 @@
                         <h6><i class="fas fa-vial mr-2"></i>Laboratory Values</h6>
                         <div class="patient-data-item">
                             <span class="label">Potassium</span>
-                            <span class="value">{{ patient_data.get('baseline_k', '-') }} mmol/L</span>
+                            <span class="value">{{ display.get('baseline_k', '-') }} mmol/L</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">Sodium</span>
-                            <span class="value">{{ patient_data.get('baseline_na', '-') }} mmol/L</span>
+                            <span class="value">{{ display.get('baseline_na', '-') }} mmol/L</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">Creatinine</span>
-                            <span class="value">{{ patient_data.get('baseline_creat', '-') }} mg/dL</span>
+                            <span class="value">{{ display.get('baseline_creat', '-') }} mg/dL</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">Hemoglobin</span>
-                            <span class="value">{{ patient_data.get('baseline_hb', '-') }} g/dL</span>
+                            <span class="value">{{ display.get('baseline_hb', '-') }} g/dL</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">Hematocrit</span>
-                            <span class="value">{{ patient_data.get('baseline_hct', '-') }}%</span>
+                            <span class="value">{{ display.get('baseline_hct', '-') }}%</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">NT-proBNP</span>
-                            <span class="value">{{ patient_data.get('baseline_ntbnp', '-') }} pg/mL</span>
+                            <span class="value">{{ display.get('baseline_ntbnp', '-') }} pg/mL</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">Urea</span>
-                            <span class="value">{{ patient_data.get('baseline_urea', '-') }} mg/dL</span>
+                            <span class="value">{{ display.get('baseline_urea', '-') }} mg/dL</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">Cystatin C</span>
-                            <span class="value">{{ patient_data.get('baseline_cys', '-') }} mg/L</span>
+                            <span class="value">{{ display.get('baseline_cys', '-') }} mg/L</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">hs-cTnT</span>
-                            <span class="value">{{ patient_data.get('baseline_hscnt', '-') }} ng/L</span>
+                            <span class="value">{{ display.get('baseline_hscnt', '-') }} ng/L</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">GDF-15</span>
-                            <span class="value">{{ patient_data.get('baseline_gdf15', '-') }} pg/mL</span>
+                            <span class="value">{{ display.get('baseline_gdf15', '-') }} pg/mL</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">CRP</span>
-                            <span class="value">{{ patient_data.get('baseline_crp', '-') }} mg/L</span>
+                            <span class="value">{{ display.get('baseline_crp', '-') }} mg/L</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">IL-6</span>
-                            <span class="value">{{ patient_data.get('baseline_il6', '-') }} pg/mL</span>
+                            <span class="value">{{ display.get('baseline_il6', '-') }} pg/mL</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">Cholesterol</span>
-                            <span class="value">{{ patient_data.get('baseline_chol', '-') }} mg/dL</span>
+                            <span class="value">{{ display.get('baseline_chol', '-') }} mg/dL</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">HbA1c</span>
-                            <span class="value">{{ patient_data.get('baseline_hb_a1c', '-') }}%</span>
+                            <span class="value">{{ display.get('baseline_hb_a1c', '-') }}%</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">Transferrin</span>
-                            <span class="value">{{ patient_data.get('baseline_tf', '-') }} mg/dL</span>
+                            <span class="value">{{ display.get('baseline_tf', '-') }} mg/dL</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">Free Testosterone</span>
-                            <span class="value">{{ patient_data.get('baseline_ft', '-') }} ng/dL</span>
+                            <span class="value">{{ display.get('baseline_ft', '-') }} ng/dL</span>
                         </div>
                     </div>
                 </div>
@@ -524,7 +516,7 @@
                         <h6><i class="fas fa-heart mr-2"></i>Cardiac Function</h6>
                         <div class="patient-data-item">
                             <span class="label">LVEF</span>
-                            <span class="value">{{ patient_data.get('lvef', '-') }}%</span>
+                            <span class="value">{{ display.get('lvef', '-') }}%</span>
                         </div>
                         <div class="patient-data-item">
                             <span class="label">NYHA Class</span>
@@ -764,8 +756,7 @@
                                 <tr>
                                     <th style="padding: 14px 16px;">Treatment</th>
                                     <th style="padding: 14px 16px;">Tau (Effect)</th>
-                                    <th style="padding: 14px 16px;">CI Lower</th>
-                                    <th style="padding: 14px 16px;">CI Upper</th>
+                                    <th style="padding: 14px 16px;">Upper Confidence Bound</th>
                                     <th style="padding: 14px 16px;">Status</th>
                                 </tr>
                             </thead>
@@ -783,9 +774,6 @@
                                     </td>
                                     <td style="padding: 14px 16px; font-family: monospace;">
                                         {{ "%.4f"|format(tau) if tau is not none else "-" }}
-                                    </td>
-                                    <td style="padding: 14px 16px; font-family: monospace; color: #888;">
-                                        {{ "%.4f"|format(row.get("CI_Low")) if row.get("CI_Low") is not none else "-inf" }}
                                     </td>
                                     <td style="padding: 14px 16px; font-family: monospace;">
                                         {{ "%.4f"|format(ci_high) if ci_high is not none else "N/A" }}
@@ -818,13 +806,13 @@
                             <strong>Tau (Treatment Effect):</strong><br>
                             Estimated individual treatment effect. Negative = beneficial.
                         </div>
-                        <div class="col-md-4">
-                            <strong>CI Upper Bound:</strong><br>
-                            One-sided 90% confidence interval. If &lt; 0, effect is statistically significant.
+                        <div class="col-md-6">
+                            <strong>Upper Confidence Bound:</strong><br>
+                            One-sided 90% confidence interval upper bound. If &lt; 0, effect is statistically significant.
                         </div>
-                        <div class="col-md-4">
-                            <strong>CI Lower Bound:</strong><br>
-                            Unbounded for one-sided tests (shown as -inf).
+                        <div class="col-md-6">
+                            <strong>Note:</strong><br>
+                            CI lower bounds are unbounded for one-sided intervals and are intentionally omitted from user-facing tables.
                         </div>
                     </div>
                 </div>
@@ -907,13 +895,7 @@
                             This AI-generated explanation is derived from the treatment effect data shown in the Evidence tab.<br>
                             It serves as supplementary information and does not replace clinical judgment.
                             {% if alex_guidance.model %}<br><strong>Model:</strong> {{ alex_guidance.model }}{% endif %}
-                            {% if alex_guidance.request_id %}<br><strong>Request ID:</strong> <code>{{ alex_guidance.request_id }}</code>{% endif %}
-                            {% if alex_guidance.metadata and alex_guidance.metadata.pipeline_runner %}
-                            <br><strong>Pipeline:</strong> {{ alex_guidance.metadata.pipeline_runner }}
-                            {% endif %}
-                            {% if alex_guidance.metadata and alex_guidance.metadata.retrieval_mode %}
-                            | <strong>Retrieval:</strong> {{ alex_guidance.metadata.retrieval_mode }}
-                            {% endif %}
+                            <br><small class="text-muted">This explanation is generated by the LLM and is intended as supplementary information only.</small>
                         </div>
                     </div>
 
@@ -932,13 +914,10 @@
                             ({{ alex_guidance.error.code }})
                             {% endif %}
                         </p>
-                        {% if alex_guidance.error.details %}
+                            {% if alex_guidance.error.details %}
                         <p class="mb-0 mt-1" style="font-size: 0.8rem; color: #6c757d;">
                             {% if alex_guidance.error.details.http_status %}
                             HTTP: {{ alex_guidance.error.details.http_status }}
-                            {% endif %}
-                            {% if alex_guidance.error.details.delegation_kid %}
-                            | Delegation KID: {{ alex_guidance.error.details.delegation_kid }}
                             {% endif %}
                         </p>
                         {% endif %}
@@ -1214,7 +1193,7 @@
                                 const best = item.dataIndex === bestIdx ? ' (Recommended)' : '';
                                 return [
                                     'Effect: ' + d.tau.toFixed(4) + best,
-                                    'CI Upper: ' + d.ciHigh.toFixed(4)
+                                    'Upper Confidence Bound: ' + d.ciHigh.toFixed(4)
                                 ];
                             }
                         }

@@ -1,0 +1,4 @@
+{
+  "success": false,
+  "error": "Invalid Plumber result row at index 0: expected dict, got str"
+}

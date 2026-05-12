@@ -117,12 +117,22 @@
                 </tr>
             </thead>
             <tbody>
-                {% for key, value in prediction.input_json.items() %}
-                <tr>
-                    <td>{{ key }}</td>
-                    <td>{{ value }}</td>
-                </tr>
-                {% endfor %}
+                {% set provided = prediction.input_json.get('_provided_fields') %}
+                {% if provided %}
+                    {% for key in provided %}
+                    <tr>
+                        <td>{{ key }}</td>
+                        <td>{{ prediction.input_json.get(key) }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    {% for key, value in prediction.input_json.items() %}
+                    <tr>
+                        <td>{{ key }}</td>
+                        <td>{{ value }}</td>
+                    </tr>
+                    {% endfor %}
+                {% endif %}
             </tbody>
         </table>
     </div>

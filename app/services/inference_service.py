@@ -1,4 +1,5 @@
 import logging
+import json
 from r_pipeline_link.r_runner import run_inference
 from clients.plumber_client import call_plumber_predict
 from services.decision_engine import classify_treatments
@@ -188,23 +189,75 @@ def perform_inference(input_filename=None, input_data=None, user_context=None):
     # New path: forward flat dict payload to the Plumber API
     if isinstance(input_data, dict):
         try:
-            result_list = call_plumber_predict(input_data)
-            result_list = _sanitise_result_list(result_list)
-            result_list = _rank_result_list(result_list)
+            raw_result = call_plumber_predict(input_data)
 
-            # Build the main inference result
-            inference_result = {"success": True, "data": result_list}
+            # Debug: record exact type and repr of the plumber response
+            try:
+                logger.debug("Plumber response type: %s", type(raw_result).__name__)
+                logger.debug("Plumber response repr: %s", repr(raw_result))
+                if isinstance(raw_result, list) and len(raw_result) > 0:
+                    logger.debug("Plumber first element type: %s", type(raw_result[0]).__name__)
+                    logger.debug("Plumber first element repr: %s", repr(raw_result[0]))
+            except Exception:
+                logger.exception("Failed to log Plumber response debug info")
 
-            # Classify treatments into decision tiers
-            decision_summary = classify_treatments(result_list)
-            inference_result["decision_summary"] = decision_summary
+            # Handle different shapes of Plumber responses defensively
+            # 1) Normal: list of dicts -> proceed
+            if isinstance(raw_result, list):
+                # Validate element types before sanitising
+                for i, row in enumerate(raw_result):
+                    if not isinstance(row, dict):
+                        raise RuntimeError(f"Invalid Plumber result row at index {i}: expected dict, got {type(row).__name__}")
 
-            # Try to get Alex LLM guidance (non-blocking)
-            # If this fails, we still return the successful inference result
-            alex_guidance = _get_alex_guidance(input_data, inference_result, user_context=user_context)
-            inference_result["alex_guidance"] = alex_guidance
+                result_list = _sanitise_result_list(raw_result)
+                result_list = _rank_result_list(result_list)
 
-            return inference_result
+                # Build the main inference result
+                inference_result = {"success": True, "data": result_list}
+
+                # Classify treatments into decision tiers
+                decision_summary = classify_treatments(result_list)
+                inference_result["decision_summary"] = decision_summary
+
+                # Try to get Alex LLM guidance (non-blocking)
+                alex_guidance = _get_alex_guidance(input_data, inference_result, user_context=user_context)
+                inference_result["alex_guidance"] = alex_guidance
+
+                return inference_result
+
+            # 2) Error dict returned by Plumber -> raise clean RuntimeError with message
+            if isinstance(raw_result, dict):
+                # Common patterns: {'status': ['error'], 'message': [...]}
+                msg = None
+                if 'message' in raw_result:
+                    m = raw_result.get('message')
+                    if isinstance(m, (list, tuple)):
+                        msg = ' '.join(str(x) for x in m)
+                    else:
+                        msg = str(m)
+                elif 'error' in raw_result:
+                    msg = str(raw_result.get('error'))
+                else:
+                    msg = str(raw_result)
+
+                raise RuntimeError(f"Plumber error: {msg}")
+
+            # 3) JSON string containing an error object
+            if isinstance(raw_result, str):
+                try:
+                    parsed = json.loads(raw_result)
+                    if isinstance(parsed, dict):
+                        # Re-handle as dict case
+                        m = parsed.get('message') or parsed.get('error') or parsed
+                        raise RuntimeError(f"Plumber error: {m}")
+                    else:
+                        raise RuntimeError(f"Plumber returned unexpected string response: {parsed}")
+                except json.JSONDecodeError:
+                    raise RuntimeError(f"Plumber returned unexpected string response: {raw_result}")
+
+            # Unknown shape
+            raise RuntimeError(f"Unexpected Plumber response type: {type(raw_result).__name__}")
+
         except RuntimeError as e:
             return {"success": False, "error": str(e)}
 
