@@ -817,6 +817,13 @@ select:focus {
     transition: left 2s ease; /* smooth slide */
 }
 
+.biomarker-delta {
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 2px;
+    display: inline-block;
+}
+
 /* ----------------------------------------- */
 /* Digital Twin preview on results page */
 /* ----------------------------------------- */

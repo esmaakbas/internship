@@ -1073,8 +1073,19 @@
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script id="results-data" type="application/json">{{ data | tojson }}</script>
-<script type="module" src="{{ url_for('static', filename='digital_twin/assets/main-NZbGvn1k.js') }}"></script>
-<script type="module" src="{{ url_for('static', filename='digital_twin/assets/preview-DVGWNkMR.js') }}"></script><script>
+<!--
+Switch between local development (localhost) and production (compressed js files)
+<script type="module" src="http://localhost:5173/static/digital_twin/src/main.js"></script>
+<script type="module" src="{{ url_for('static', filename='digital_twin/assets/main-C1AHMYSP.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='digital_twin/assets/preview-y8hT4Nxu.js') }}"></script>
+<script type="module" src="http://localhost:5173/static/digital_twin/src/preview.js"></script>
+-->
+<script type="module" src="{{ url_for('static', filename='digital_twin/assets/main-C1AHMYSP.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='digital_twin/assets/preview-y8hT4Nxu.js') }}"></script>
+<script>
+    window.patientPayload = {{ patient_data | tojson }};
+</script>
+<script>
 (function () {
     const rawDataNode = document.getElementById('results-data');
     if (!rawDataNode) return;
