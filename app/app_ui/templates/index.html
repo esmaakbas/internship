@@ -169,7 +169,7 @@
                     </div>
                     <div class="form-group col-md-3">
                         <label for="baseline_bw">Body Weight (kg)</label>
-                        <input type="number" class="form-control" id="baseline_bw" name="baseline_bw" step="0.1" min="30" max="300"
+                        <input type="number" class="form-control" id="baseline_bw" name="baseline_bw" step="any" min="30" max="300"
                                value="{{ prefill_data.get('baseline_bw', '') if prefill_data else '' }}"
                                placeholder="e.g. 70">
                     </div>
@@ -177,7 +177,7 @@
                 <div class="form-row">
                     <div class="form-group col-md-3">
                         <label for="baseline_bmi">BMI (kg/m²)</label>
-                        <input type="number" class="form-control" id="baseline_bmi" name="baseline_bmi" step="0.1" min="10" max="60"
+                        <input type="number" class="form-control" id="baseline_bmi" name="baseline_bmi" step="any" min="10" max="60"
                                value="{{ prefill_data.get('baseline_bmi', '') if prefill_data else '' }}"
                                placeholder="e.g. 26.5">
                     </div>
@@ -471,7 +471,7 @@
                 <div class="form-row mt-3">
                     <div class="form-group col-md-3">
                         <label for="baseline_k">Potassium (mmol/L)</label>
-                        <input type="number" class="form-control" id="baseline_k" name="baseline_k" step="0.1" min="2.0" max="7.5"
+                        <input type="number" class="form-control" id="baseline_k" name="baseline_k" step="any" min="2.0" max="7.5"
                                value="{{ prefill_data.get('baseline_k', '') if prefill_data else '' }}"
                                placeholder="e.g. 4.5">
                     </div>
@@ -483,7 +483,7 @@
                     </div>
                     <div class="form-group col-md-3">
                         <label for="baseline_creat">Creatinine (mg/dL)</label>
-                        <input type="number" class="form-control" id="baseline_creat" name="baseline_creat" step="0.01" min="0.1" max="15"
+                        <input type="number" class="form-control" id="baseline_creat" name="baseline_creat" step="any" min="0.1" max="15"
                                value="{{ prefill_data.get('baseline_creat', '') if prefill_data else '' }}"
                                placeholder="e.g. 1.2">
                     </div>
@@ -502,13 +502,13 @@
                     <div class="form-row">
                         <div class="form-group col-md-3">
                             <label for="baseline_hb">Hemoglobin (g/dL)</label>
-                            <input type="number" class="form-control" id="baseline_hb" name="baseline_hb" step="0.1" min="5" max="20"
+                            <input type="number" class="form-control" id="baseline_hb" name="baseline_hb" step="any" min="5" max="20"
                                    value="{{ prefill_data.get('baseline_hb', '') if prefill_data else '' }}"
                                    placeholder="e.g. 13.5">
                         </div>
                         <div class="form-group col-md-3">
                             <label for="baseline_hct">Hematocrit (%)</label>
-                            <input type="number" class="form-control" id="baseline_hct" name="baseline_hct" step="0.1" min="15" max="65"
+                            <input type="number" class="form-control" id="baseline_hct" name="baseline_hct" step="any" min="15" max="65"
                                    value="{{ prefill_data.get('baseline_hct', '') if prefill_data else '' }}"
                                    placeholder="e.g. 40">
                         </div>
@@ -524,7 +524,7 @@
                         </div>
                         <div class="form-group col-md-3">
                             <label for="baseline_cys">Cystatin C (mg/L)</label>
-                            <input type="number" class="form-control" id="baseline_cys" name="baseline_cys" step="0.01" min="0.3" max="5"
+                            <input type="number" class="form-control" id="baseline_cys" name="baseline_cys" step="any" min="0.3" max="5"
                                    value="{{ prefill_data.get('baseline_cys', '') if prefill_data else '' }}"
                                    placeholder="e.g. 1.2">
                         </div>
@@ -534,7 +534,7 @@
                     <div class="form-row">
                         <div class="form-group col-md-3">
                             <label for="baseline_hscnt">hs-cTnT (ng/L)</label>
-                            <input type="number" class="form-control" id="baseline_hscnt" name="baseline_hscnt" step="0.1" min="0" max="500"
+                            <input type="number" class="form-control" id="baseline_hscnt" name="baseline_hscnt" step="any" min="0" max="500"
                                    value="{{ prefill_data.get('baseline_hscnt', '') if prefill_data else '' }}"
                                    placeholder="e.g. 15">
                         </div>
@@ -550,13 +550,13 @@
                     <div class="form-row">
                         <div class="form-group col-md-3">
                             <label for="baseline_crp">CRP (mg/L)</label>
-                            <input type="number" class="form-control" id="baseline_crp" name="baseline_crp" step="0.01" min="0" max="300"
+                            <input type="number" class="form-control" id="baseline_crp" name="baseline_crp" step="any" min="0" max="300"
                                    value="{{ prefill_data.get('baseline_crp', '') if prefill_data else '' }}"
                                    placeholder="e.g. 5">
                         </div>
                         <div class="form-group col-md-3">
                             <label for="baseline_il6">IL-6 (pg/mL)</label>
-                            <input type="number" class="form-control" id="baseline_il6" name="baseline_il6" step="0.01" min="0" max="500"
+                            <input type="number" class="form-control" id="baseline_il6" name="baseline_il6" step="any" min="0" max="500"
                                    value="{{ prefill_data.get('baseline_il6', '') if prefill_data else '' }}"
                                    placeholder="e.g. 3">
                         </div>
@@ -572,7 +572,7 @@
                         </div>
                         <div class="form-group col-md-3">
                             <label for="baseline_hb_a1c">HbA1c (%)</label>
-                            <input type="number" class="form-control" id="baseline_hb_a1c" name="baseline_hb_a1c" step="0.1" min="3" max="15"
+                            <input type="number" class="form-control" id="baseline_hb_a1c" name="baseline_hb_a1c" step="any" min="3" max="15"
                                    value="{{ prefill_data.get('baseline_hb_a1c', '') if prefill_data else '' }}"
                                    placeholder="e.g. 6.5">
                         </div>
@@ -584,7 +584,7 @@
                         </div>
                         <div class="form-group col-md-3">
                             <label for="baseline_ft">Free Testosterone (ng/dL)</label>
-                            <input type="number" class="form-control" id="baseline_ft" name="baseline_ft" step="0.1" min="0" max="500"
+                            <input type="number" class="form-control" id="baseline_ft" name="baseline_ft" step="any" min="0" max="500"
                                    value="{{ prefill_data.get('baseline_ft', '') if prefill_data else '' }}"
                                    placeholder="e.g. 100">
                         </div>
@@ -600,19 +600,19 @@
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="bb_dose">Beta-Blocker Dose (mg)</label>
-                        <input type="number" class="form-control" id="bb_dose" name="bb_dose" step="0.5" min="0"
+                        <input type="number" class="form-control" id="bb_dose" name="bb_dose" step="any" min="0"
                                value="{{ prefill_data.get('bb_dose', '') if prefill_data else '' }}"
                                placeholder="e.g. 25">
                     </div>
                     <div class="form-group col-md-4">
                         <label for="arni_dose">ARNI Dose (mg)</label>
-                        <input type="number" class="form-control" id="arni_dose" name="arni_dose" step="1" min="0"
+                        <input type="number" class="form-control" id="arni_dose" name="arni_dose" step="any" min="0"
                                value="{{ prefill_data.get('arni_dose', '') if prefill_data else '' }}"
                                placeholder="e.g. 100">
                     </div>
                     <div class="form-group col-md-4">
                         <label for="sglt_dose">SGLT2i Dose (mg)</label>
-                        <input type="number" class="form-control" id="sglt_dose" name="sglt_dose" step="1" min="0"
+                        <input type="number" class="form-control" id="sglt_dose" name="sglt_dose" step="any" min="0"
                                value="{{ prefill_data.get('sglt_dose', '') if prefill_data else '' }}"
                                placeholder="e.g. 10">
                     </div>
@@ -620,13 +620,13 @@
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="mra_dose">MRA Dose (mg)</label>
-                        <input type="number" class="form-control" id="mra_dose" name="mra_dose" step="0.5" min="0"
+                        <input type="number" class="form-control" id="mra_dose" name="mra_dose" step="any" min="0"
                                value="{{ prefill_data.get('mra_dose', '') if prefill_data else '' }}"
                                placeholder="e.g. 25">
                     </div>
                     <div class="form-group col-md-4">
                         <label for="loopd_dose">Loop Diuretic Dose (mg)</label>
-                        <input type="number" class="form-control" id="loopd_dose" name="loopd_dose" step="0.5" min="0"
+                        <input type="number" class="form-control" id="loopd_dose" name="loopd_dose" step="any" min="0"
                                value="{{ prefill_data.get('loopd_dose', '') if prefill_data else '' }}"
                                placeholder="e.g. 40">
                     </div>
@@ -634,13 +634,13 @@
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="ace_dose">ACE Inhibitor Dose (mg)</label>
-                        <input type="number" class="form-control" id="ace_dose" name="ace_dose" step="0.5" min="0"
+                        <input type="number" class="form-control" id="ace_dose" name="ace_dose" step="any" min="0"
                                value="{{ prefill_data.get('ace_dose', '') if prefill_data else '' }}"
                                placeholder="e.g. 10">
                     </div>
                     <div class="form-group col-md-4">
                         <label for="arb_dose">ARB Dose (mg)</label>
-                        <input type="number" class="form-control" id="arb_dose" name="arb_dose" step="0.5" min="0"
+                        <input type="number" class="form-control" id="arb_dose" name="arb_dose" step="any" min="0"
                                value="{{ prefill_data.get('arb_dose', '') if prefill_data else '' }}"
                                placeholder="e.g. 50">
                     </div>
@@ -685,19 +685,19 @@
                     <div class="form-row">
                         <div class="form-group col-md-4">
                             <label for="Loop_dose_prev">Previous Loop Dose (mg)</label>
-                            <input type="number" class="form-control" id="Loop_dose_prev" name="Loop_dose_prev" step="0.5" min="0"
+                            <input type="number" class="form-control" id="Loop_dose_prev" name="Loop_dose_prev" step="any" min="0"
                                    value="{{ prefill_data.get('Loop_dose_prev', '') if prefill_data else '' }}"
                                    placeholder="e.g. 20">
                         </div>
                         <div class="form-group col-md-4">
                             <label for="SGLT2Dose_prev">Previous SGLT2i Dose (mg)</label>
-                            <input type="number" class="form-control" id="SGLT2Dose_prev" name="SGLT2Dose_prev" step="1" min="0"
+                            <input type="number" class="form-control" id="SGLT2Dose_prev" name="SGLT2Dose_prev" step="any" min="0"
                                    value="{{ prefill_data.get('SGLT2Dose_prev', '') if prefill_data else '' }}"
                                    placeholder="e.g. 10">
                         </div>
                         <div class="form-group col-md-4">
                             <label for="ARNIDose_prev">Previous ARNI Dose (mg)</label>
-                            <input type="number" class="form-control" id="ARNIDose_prev" name="ARNIDose_prev" step="1" min="0"
+                            <input type="number" class="form-control" id="ARNIDose_prev" name="ARNIDose_prev" step="any" min="0"
                                    value="{{ prefill_data.get('ARNIDose_prev', '') if prefill_data else '' }}"
                                    placeholder="e.g. 50">
                         </div>

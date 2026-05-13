@@ -376,11 +376,9 @@
                                 <a href="/" class="btn btn-sm btn-outline-primary" style="text-align: left;">
                                     <i class="fas fa-redo mr-2"></i>New Analysis
                                 </a>
-                                {% if prediction_id %}
-                                <a href="{{ url_for('history.history_detail', prediction_id=prediction_id) }}" class="btn btn-sm btn-outline-secondary" style="text-align: left;">
+                                <a href="{{ url_for('history.history_index') }}" class="btn btn-sm btn-outline-secondary" style="text-align: left;">
                                     <i class="fas fa-folder-open mr-2"></i>View Saved Result
                                 </a>
-                                {% endif %}
                             </div>
                         </div>
                         <div class="col-md-4">
