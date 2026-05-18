@@ -212,7 +212,7 @@
                 <a class="nav-link" id="patient-tab" data-toggle="tab" href="#patient" role="tab" style="font-weight: 500;">Patient Data</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" id="model-tab" data-toggle="tab" href="#model" role="tab" style="font-weight: 500;">ML Model</a>
+                <a class="nav-link" id="model-tab" data-toggle="tab" href="#model" role="tab" style="font-weight: 500;">ML Module</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" id="llm-tab" data-toggle="tab" href="#llm" role="tab" style="font-weight: 500; color: #6c757d;">LLM</a>
@@ -251,7 +251,7 @@
                             <strong style="color: white; font-size: 1.05rem;">Evidence Snapshot</strong>
                         </div>
                         <div class="card-body" style="padding: 20px;">
-                            <div class="mb-1" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d;">ML Model Recommended Treatment</div>
+                            <div class="mb-1" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d;">ML Module Recommended Treatment</div>
                             <div class="mb-2" style="font-size: 1.6rem; font-weight: 700; color: #1a252f;">
                                 {{ decision_summary.primary_recommendation.Drug if decision_summary and decision_summary.primary_recommendation else 'None' }}
                             </div>

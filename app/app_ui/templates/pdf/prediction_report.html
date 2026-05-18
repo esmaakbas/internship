@@ -139,13 +139,12 @@
 
     {% set rows = prediction.output_json.get('inference_rows', []) %}
     <div class="section">
-        <h2>2. Prediction Output</h2>
+        <h2>2. Prediction Output (ML Module)</h2>
         <table>
             <thead>
                 <tr>
                     <th>Drug</th>
                     <th>Tau Point</th>
-                    <th>CI Low</th>
                     <th>CI High</th>
                 </tr>
             </thead>
@@ -155,13 +154,12 @@
                     <tr>
                         <td>{{ row.get('Drug', '-') }}</td>
                         <td>{{ row.get('Tau_Point', '-') }}</td>
-                        <td>{{ row.get('CI_Low', '-') }}</td>
                         <td>{{ row.get('CI_High', '-') }}</td>
                     </tr>
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="4">No prediction output available.</td>
+                        <td colspan="3">No prediction output available.</td>
                     </tr>
                 {% endif %}
             </tbody>

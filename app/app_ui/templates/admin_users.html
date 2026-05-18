@@ -731,7 +731,9 @@
                     <div class="form-row">
                         <div class="form-group col-md-7">
                             <label>Temporary Password</label>
-                            <input name="password" type="password" class="form-control" minlength="8" required>
+                            <input name="password" id="addUserPassword" type="password" class="form-control" minlength="8" required>
+                            <small id="passwordHelp" class="form-text text-muted">Password must be at least 8 characters and include uppercase, lowercase, a number and a symbol.</small>
+                            <div style="margin-top:6px;"><span id="passwordStrength" style="font-size:0.9rem;color:#6b7280"></span></div>
                         </div>
                         <div class="form-group col-md-5">
                             <label>Role</label>
@@ -745,7 +747,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create User</button>
+                    <button type="submit" class="btn btn-primary" id="createUserSubmitBtn">Create User</button>
                 </div>
             </form>
         </div>
@@ -896,6 +898,86 @@ document.addEventListener('DOMContentLoaded', function () {
         showArchivedBtn.classList.remove('active');
         currentPage = 1;
         applyFilters();
+    }
+
+    // Add User form - client-side password strength validation and confirmation flow
+    var addUserForm = document.getElementById('addUserForm');
+    if (addUserForm) {
+        var confirmAddModal = $('#confirmAddUserModal');
+        var confirmAddEmail = document.getElementById('confirmAddEmail');
+        var confirmAddName = document.getElementById('confirmAddName');
+        var confirmAddRole = document.getElementById('confirmAddRole');
+        var confirmAddUserBtn = document.getElementById('confirmAddUserBtn');
+
+        function passwordIsStrong(pw) {
+            if (!pw || pw.length < 8) return false;
+            // Require at least one lowercase, one uppercase, one digit, and one symbol
+            var re = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9])/;
+            return re.test(pw);
+        }
+
+        addUserForm.addEventListener('submit', function (evt) {
+            // Prevent default submit and show confirm modal instead
+            evt.preventDefault();
+            var form = addUserForm;
+            var email = (form.querySelector('input[name="email"]').value || '').trim();
+            var name = (form.querySelector('input[name="display_name"]').value || '').trim();
+            var pw = form.querySelector('input[name="password"]').value || '';
+            var role = (form.querySelector('select[name="role"]').value || '').trim();
+
+            if (!email) { if (window.showToast) window.showToast('Please enter an email.', 'warning'); return; }
+            if (!name) { if (window.showToast) window.showToast('Please enter a display name.', 'warning'); return; }
+            if (!passwordIsStrong(pw)) {
+                if (window.showToast) window.showToast('Password looks too weak. Use at least 8 chars including upper/lower, number and symbol.', 'warning');
+                return;
+            }
+
+            // Populate confirmation modal and show it
+            if (confirmAddEmail) confirmAddEmail.textContent = email;
+            if (confirmAddName) confirmAddName.textContent = name;
+            if (confirmAddRole) confirmAddRole.textContent = role || 'user';
+            confirmAddModal.modal('show');
+        });
+
+        // When user confirms, submit the original form
+        if (confirmAddUserBtn) {
+            confirmAddUserBtn.addEventListener('click', function () {
+                confirmAddModal.modal('hide');
+                addUserForm.submit();
+            });
+            // Ensure confirm button state reflects current password strength
+            confirmAddUserBtn.disabled = true;
+        }
+
+        // Live update password strength indicator and enable/disable buttons
+        var pwInput = document.getElementById('addUserPassword');
+        var pwIndicator = document.getElementById('passwordStrength');
+        var createUserSubmitBtn = document.getElementById('createUserSubmitBtn');
+
+        function updatePasswordUI() {
+            var val = pwInput ? pwInput.value : '';
+            if (!val || val.length === 0) {
+                if (pwIndicator) pwIndicator.textContent = '';
+                if (confirmAddUserBtn) confirmAddUserBtn.disabled = true;
+                if (createUserSubmitBtn) createUserSubmitBtn.disabled = true;
+                return;
+            }
+            if (passwordIsStrong(val)) {
+                if (pwIndicator) { pwIndicator.textContent = 'Strong password'; pwIndicator.style.color = '#10b981'; }
+                if (confirmAddUserBtn) confirmAddUserBtn.disabled = false;
+                if (createUserSubmitBtn) createUserSubmitBtn.disabled = false;
+            } else {
+                if (pwIndicator) { pwIndicator.textContent = 'Password too weak'; pwIndicator.style.color = '#ef4444'; }
+                if (confirmAddUserBtn) confirmAddUserBtn.disabled = true;
+                if (createUserSubmitBtn) createUserSubmitBtn.disabled = true;
+            }
+        }
+
+        if (pwInput) {
+            pwInput.addEventListener('input', updatePasswordUI);
+            // initialize
+            updatePasswordUI();
+        }
     }
 
     function showArchivedUsers() {

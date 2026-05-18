@@ -188,7 +188,7 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% block nav_predict %}{% endblock %}" href="/predict">
+                            <a id="sidebarRunInference" class="nav-link {% block nav_predict %}{% endblock %}" href="/predict">
                                 <i class="fas fa-chart-line"></i> Run Inference
                             </a>
                         </li>
@@ -283,6 +283,69 @@
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // Sidebar Run Inference enabling/disabling logic:
+        // - If the current page is results (detectable by presence of #resultTabs), set localStorage flag.
+        // - Sidebar link is disabled when localStorage flag is not set.
+        document.addEventListener('DOMContentLoaded', function () {
+            try {
+                var sidebarLink = document.getElementById('sidebarRunInference');
+                if (!sidebarLink) return;
+
+                var isResultsPage = !!document.getElementById('resultTabs');
+                if (isResultsPage) {
+                    // Mark that we have a prediction available
+                    try { localStorage.setItem('capsico_has_prediction', '1'); } catch (e) {}
+                }
+
+                function setDisabledState(disabled) {
+                    if (disabled) {
+                        sidebarLink.classList.add('disabled');
+                        sidebarLink.setAttribute('aria-disabled', 'true');
+                        // prevent navigation
+                        sidebarLink.addEventListener('click', preventNavIfDisabled);
+                        sidebarLink.style.pointerEvents = 'auto';
+                        sidebarLink.style.opacity = '0.5';
+                        sidebarLink.style.cursor = 'not-allowed';
+                    } else {
+                        sidebarLink.classList.remove('disabled');
+                        sidebarLink.removeAttribute('aria-disabled');
+                        sidebarLink.removeEventListener('click', preventNavIfDisabled);
+                        sidebarLink.style.opacity = '';
+                        sidebarLink.style.cursor = '';
+                    }
+                }
+
+                function preventNavIfDisabled(e) {
+                    var flag = false;
+                    try { flag = localStorage.getItem('capsico_has_prediction') !== '1'; } catch (e) { flag = true; }
+                    if (flag) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (window.showToast) window.showToast('No results available yet. Run an analysis first.', 'warning');
+                        return false;
+                    }
+                }
+
+                var hasPrediction = false;
+                try { hasPrediction = localStorage.getItem('capsico_has_prediction') === '1'; } catch (e) { hasPrediction = false; }
+
+                // If on results page, ensure enabled
+                if (isResultsPage) setDisabledState(false);
+                else setDisabledState(!hasPrediction);
+
+                // Clear flag when user navigates to home (new analysis)
+                var homeLinks = document.querySelectorAll('a[href="/"]');
+                homeLinks.forEach(function (lnk) {
+                    lnk.addEventListener('click', function () {
+                        try { localStorage.removeItem('capsico_has_prediction'); } catch (e) {}
+                    });
+                });
+            } catch (err) {
+                console.warn('Sidebar prediction state script failed', err);
+            }
+        });
+    </script>
     <script>
         // Toast Notification System
         (function() {

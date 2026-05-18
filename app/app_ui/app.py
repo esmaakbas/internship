@@ -19,6 +19,7 @@ from config import (
     FLASK_DEBUG,
     FLASK_HOST,
     FLASK_PORT,
+    PLUMBER_API_URL,
     ALLOWED_DEBUG_IPS,
     SESSION_TYPE,
     SESSION_PERMANENT,
@@ -33,7 +34,7 @@ from config import (
 from database import (
     check_connection,
     count_users,
-    create_prediction_record, # (not existent in database.py)
+    create_prediction_record,
     validate_database,
     list_users_for_admin,
     upsert_user_record_from_auth0,
@@ -137,7 +138,7 @@ def _resolve_alex_user_context():
     if isinstance(user_context, dict) and user_context:
         return user_context
 
-    if FLASK_DEBUG:
+    if FLASK_DEBUG:  # local development fallback only
         return {"auth0_sub": "auth0|local-dev-user"}
 
     return None
@@ -199,6 +200,15 @@ if AUTH0_ENABLED:
 
                     if not display_name:
                         display_name = email.split("@")[0]
+
+                    # Server-side password strength check to prevent weak passwords
+                    import re
+                    pw = password or ""
+                    pw_re = re.compile(r'(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}')
+                    if not pw_re.match(pw):
+                        raise ValueError(
+                            "Password is too weak. Use at least 8 characters including upper- and lower-case letters, numbers, and symbols."
+                        )
 
                     created = create_auth0_user(
                         email=email,
@@ -347,8 +357,32 @@ if AUTH0_ENABLED:
                     raise ValueError("Unsupported admin action")
 
             except (ValueError, Auth0ManagementError, SQLAlchemyError) as exc:
-                app.logger.error(f"Admin user action failed: {exc}")
-                flash(str(exc), "danger")
+                # Present friendlier messages for known Auth0 Management API errors
+                try:
+                    from services.auth0_management_service import Auth0ManagementError as _A0Err
+                except Exception:
+                    _A0Err = Auth0ManagementError
+
+                user_message = None
+                if isinstance(exc, _A0Err):
+                    text = str(exc)
+                    # Detect common password strength error returned by Auth0 and map to friendly message
+                    if 'PasswordStrengthError' in text or 'Password is too weak' in text or 'password_strength' in text.lower():
+                        user_message = (
+                            "Password is too weak. Choose a stronger temporary password: at least 8 characters, "
+                            "including upper- and lower-case letters, numbers, and symbols."
+                        )
+                    elif 'AUTH0_DB_CONNECTION' in text:
+                        user_message = "Server is not configured to create Auth0 users (missing DB connection)."
+                    else:
+                        user_message = "Failed to perform Auth0 operation. See server logs for details."
+
+                    app.logger.error(f"Auth0 management error during admin action: {text}")
+                else:
+                    user_message = str(exc)
+                    app.logger.error(f"Admin user action failed: {exc}")
+
+                flash(user_message, "danger")
             except Exception as exc:
                 app.logger.error(f"Unexpected admin user action error: {exc}", exc_info=True)
                 flash("Unexpected error while processing admin action.", "danger")
@@ -443,11 +477,22 @@ else:
 @app.route("/predict", methods=['GET', 'POST'])
 def predict():
     if request.method == 'POST':
+        try:
+            app.logger.info("POST /predict received")
+            app.logger.debug("Request args: %s", repr(request.args))
+            app.logger.debug("Request form keys at /predict start: %s", list(request.form.keys()))
         # Parse and validate the submitted form values.
         # overrides  – clean, type-correct values ready to apply to the payload
         # raw_values – original strings for re-populating the form on errors
         # errors     – field-keyed error messages; empty means the form is valid
-        overrides, raw_values, errors = parse_patient_form(request.form)
+            # For debugging: if caller requests debug_form, return the received keys
+            if request.args.get('debug_form') == '1':
+                return jsonify({'form_keys': list(request.form.keys()), 'form': request.form.to_dict(flat=True)})
+
+            overrides, raw_values, errors = parse_patient_form(request.form)
+        except Exception as exc:
+            app.logger.exception('Exception while handling POST /predict')
+            return jsonify({'ok': False, 'error': str(exc)}), 500
 
         if errors:
             # Re-render the form with preserved input and clear error messages.
@@ -483,25 +528,35 @@ def predict():
             "alex_guidance": result.get("alex_guidance"),
         }
         prediction_id = None
+
+        # Persist prediction record when user is authenticated. Store which
+        # fields were actually provided by the user so UI/PDF only surface
+        # those fields (do not expose internal defaults as user-provided).
+        provided_fields = list(overrides.keys())
         if AUTH0_ENABLED:
             current_user = getattr(g, "user", None)
             if isinstance(current_user, dict) and current_user.get("id"):
                 try:
+                    storage_input = payload.copy()
+                    storage_input["_provided_fields"] = provided_fields
                     prediction_id = create_prediction_record(
                         user_id=int(current_user["id"]),
-                        input_json=payload,
+                        input_json=storage_input,
                         output_json=prediction_output_payload,
                         model_version="plumber-v1",
                     )
                 except SQLAlchemyError as exc:
                     app.logger.error("Failed to persist prediction record: %s", exc, exc_info=True)
 
+        # Render results; pass `patient_display` (only user-supplied values)
+        # so templates can prefer showing only submitted fields.
         return render_template(
             "results.html",
             data=result["data"],
             decision_summary=result.get("decision_summary"),
             alex_guidance=result.get("alex_guidance"),
             patient_data=payload,
+            patient_display=overrides,
             prediction_id=prediction_id,
         )
 
@@ -550,6 +605,131 @@ def test_plumber():
         patient_data=payload,
         prediction_id=None,
     )
+
+
+@app.route('/decision_table_patient', methods=['POST', 'OPTIONS'])
+def decision_table_patient_proxy():
+    """Proxy endpoint that forwards Digital Twin decision table requests to
+    the configured Plumber API `/decision_table` endpoint.
+
+    Accepts POST requests with a JSON body (patient payload) and returns JSON
+    response from the Plumber service. Also accepts OPTIONS for preflight.
+    """
+    # Allow CORS preflight from the frontend bundle (if any)
+    if request.method == 'OPTIONS':
+        return ('', 204)
+
+    try:
+        payload = None
+        try:
+            payload = request.get_json(force=True)
+        except Exception:
+            # If JSON parsing fails, fall back to raw data
+            payload = request.get_data(as_text=True)
+
+        import requests as _requests
+
+        # Forward to the Plumber `/decision_table` endpoint (returns the DT table)
+        target = PLUMBER_API_URL.rstrip('/') + '/decision_table'
+        app.logger.debug('Proxying decision_table_patient to %s', target)
+
+        # Plumber's /decision_table is a GET endpoint; use GET and pass
+        # the incoming payload as query params when it's a simple dict.
+        try:
+            if isinstance(payload, dict):
+                resp = _requests.get(target, params=payload, timeout=120)
+            else:
+                resp = _requests.get(target, timeout=120)
+        except TypeError:
+            # If payload isn't suitable for params (e.g., nested), call GET without params
+            resp = _requests.get(target, timeout=120)
+
+        app.logger.debug('Plumber responded %s', getattr(resp, 'status_code', None))
+        app.logger.debug('Plumber response snippet: %s', (getattr(resp, 'text', '') or '')[:500])
+        resp.raise_for_status()
+
+        # Ensure we return JSON to the frontend
+        try:
+            data = resp.json()
+
+            # Normalise Plumber response to the shape expected by the
+            # Digital Twin frontend: { "table": [ { row }, ... ] }
+            def column_oriented_to_rows(obj):
+                # obj is dict of column -> list(values)
+                cols = list(obj.keys())
+                first = obj[cols[0]]
+                n = len(first) if hasattr(first, '__len__') else 0
+                rows = []
+                for i in range(n):
+                    row = {}
+                    for c in cols:
+                        colvals = obj[c]
+                        row[c] = colvals[i] if i < len(colvals) else None
+                    rows.append(row)
+                return rows
+
+            def normalize_row_keys(row):
+                # Map common upstream column names to the JS-expected keys
+                mapping = {
+                    'Drug': 'drug', 'drug': 'drug', 'DRUG': 'drug',
+                    'Dosage': 'dosage', 'dosage': 'dosage', 'DOSAGE': 'dosage',
+                    'PatientID': 'PatientID', 'patientid': 'PatientID', 'patient_id': 'PatientID',
+                    'BPsys': 'BPsyst', 'BPsyst': 'BPsyst', 'BP_syst': 'BPsyst',
+                    'heartrate': 'heartrate', 'HeartRate': 'heartrate', 'heart_rate': 'heartrate',
+                    'Potassium': 'Potassium', 'potassium': 'Potassium',
+                    'BNP': 'BNP', 'ntprobnp': 'BNP', 'NTproBNP': 'BNP'
+                }
+
+                new = {}
+                for k, v in row.items():
+                    target = mapping.get(k, mapping.get(k.strip(), None))
+                    if target is None:
+                        # preserve original key if no mapping
+                        target = k
+                    new[target] = v
+                return new
+
+            rows = None
+            if isinstance(data, dict) and 'table' in data:
+                t = data['table']
+                # If table is a dict of columns, convert
+                if isinstance(t, dict):
+                    rows = column_oriented_to_rows(t)
+                else:
+                    rows = list(t)
+            elif isinstance(data, dict):
+                # Some Plumber responses may be column-oriented at top-level
+                # or may wrap result differently (e.g., {'data': {...}})
+                if any(isinstance(v, list) for v in data.values()):
+                    # column-oriented: convert
+                    rows = column_oriented_to_rows(data)
+                elif 'data' in data and isinstance(data['data'], list):
+                    rows = list(data['data'])
+                else:
+                    # Unknown shape - try to be tolerant and return as-is
+                    rows = []
+
+            # Ensure each row has normalized keys
+            norm_rows = [normalize_row_keys(r) if isinstance(r, dict) else r for r in rows]
+
+            app.logger.debug('decision_table_patient: returning %d rows', len(norm_rows))
+            # Return canonical shape
+            return jsonify({'table': norm_rows})
+        except Exception:
+            # Fallback: return raw content with appropriate status
+            headers = [(k, v) for k, v in resp.headers.items()]
+            return (resp.content, resp.status_code, headers)
+
+    except Exception as exc:
+        app.logger.exception('Failed to proxy decision_table_patient')
+        return (
+            jsonify({
+                'status': ['error'],
+                'message': ['Failed to fetch decision table from Plumber'],
+                'details': str(exc),
+            }),
+            502,
+        )
 
 
 # ---------------------------------------------------------------------------
