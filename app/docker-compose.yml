@@ -18,5 +18,44 @@ services:
       timeout: 5s
       retries: 5
 
+  plumber:
+    build:
+      context: .
+      dockerfile: Dockerfile.plumber
+    container_name: capsico_plumber
+    restart: unless-stopped
+    environment:
+      - PROJECT_ROOT=/pipeline
+      - PORT=8002
+    ports:
+      - "8002:8002"
+    volumes:
+      # Host pipeline folder must be mounted here by the operator.
+      # Update PIPELINE_LOCAL_PATH in .env or docker-compose override.
+      - ${PIPELINE_LOCAL_PATH}:/pipeline:cached
+    depends_on:
+      - db
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: capsico_web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=db
+      - PLUMBER_API_URL=http://plumber:8002
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - plumber
+    volumes:
+      - ./:/app:cached
+
 volumes:
   mysql_data: {}
