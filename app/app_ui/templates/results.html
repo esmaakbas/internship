@@ -1080,6 +1080,26 @@ Switch between local development (localhost) and production (compressed js files
 <script type="module" src="{{ url_for('static', filename='digital_twin/assets/preview-y8hT4Nxu.js') }}"></script>
 <script type="module" src="http://localhost:5173/static/digital_twin/src/preview.js"></script>
 -->
+<script>
+    // Patch fetch at runtime to rewrite hardcoded plumber host to app proxy.
+    // Some development bundles call http://127.0.0.1:8000/decision_table_patient
+    // which breaks same-origin / proxy setups. Rewrite those requests to
+    // the Flask proxy endpoint at `/decision_table_patient`.
+    (function(){
+        const _origFetch = window.fetch.bind(window);
+        window.fetch = function(input, init){
+            try{
+                if(typeof input === 'string'){
+                    input = input.replace('http://127.0.0.1:8000/decision_table_patient','/decision_table_patient');
+                    input = input.replace('http://localhost:8000/decision_table_patient','/decision_table_patient');
+                } else if(input && input.url){
+                    input.url = input.url.replace('http://127.0.0.1:8000/decision_table_patient','/decision_table_patient').replace('http://localhost:8000/decision_table_patient','/decision_table_patient');
+                }
+            }catch(e){/* ignore */}
+            return _origFetch(input, init);
+        };
+    })();
+</script>
 <script type="module" src="{{ url_for('static', filename='digital_twin/assets/main-C1AHMYSP.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='digital_twin/assets/preview-y8hT4Nxu.js') }}"></script>
 <script>
