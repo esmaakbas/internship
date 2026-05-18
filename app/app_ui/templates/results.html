@@ -212,7 +212,7 @@
                 <a class="nav-link" id="patient-tab" data-toggle="tab" href="#patient" role="tab" style="font-weight: 500;">Patient Data</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" id="model-tab" data-toggle="tab" href="#model" role="tab" style="font-weight: 500;">ML Model</a>
+                <a class="nav-link" id="model-tab" data-toggle="tab" href="#model" role="tab" style="font-weight: 500;">ML Module</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" id="llm-tab" data-toggle="tab" href="#llm" role="tab" style="font-weight: 500; color: #6c757d;">LLM</a>
@@ -251,7 +251,7 @@
                             <strong style="color: white; font-size: 1.05rem;">Evidence Snapshot</strong>
                         </div>
                         <div class="card-body" style="padding: 20px;">
-                            <div class="mb-1" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d;">ML Model Recommended Treatment</div>
+                            <div class="mb-1" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d;">ML Module Recommended Treatment</div>
                             <div class="mb-2" style="font-size: 1.6rem; font-weight: 700; color: #1a252f;">
                                 {{ decision_summary.primary_recommendation.Drug if decision_summary and decision_summary.primary_recommendation else 'None' }}
                             </div>
@@ -1080,6 +1080,26 @@ Switch between local development (localhost) and production (compressed js files
 <script type="module" src="{{ url_for('static', filename='digital_twin/assets/preview-y8hT4Nxu.js') }}"></script>
 <script type="module" src="http://localhost:5173/static/digital_twin/src/preview.js"></script>
 -->
+<script>
+    // Patch fetch at runtime to rewrite hardcoded plumber host to app proxy.
+    // Some development bundles call http://127.0.0.1:8000/decision_table_patient
+    // which breaks same-origin / proxy setups. Rewrite those requests to
+    // the Flask proxy endpoint at `/decision_table_patient`.
+    (function(){
+        const _origFetch = window.fetch.bind(window);
+        window.fetch = function(input, init){
+            try{
+                if(typeof input === 'string'){
+                    input = input.replace('http://127.0.0.1:8000/decision_table_patient','/decision_table_patient');
+                    input = input.replace('http://localhost:8000/decision_table_patient','/decision_table_patient');
+                } else if(input && input.url){
+                    input.url = input.url.replace('http://127.0.0.1:8000/decision_table_patient','/decision_table_patient').replace('http://localhost:8000/decision_table_patient','/decision_table_patient');
+                }
+            }catch(e){/* ignore */}
+            return _origFetch(input, init);
+        };
+    })();
+</script>
 <script type="module" src="{{ url_for('static', filename='digital_twin/assets/main-C1AHMYSP.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='digital_twin/assets/preview-y8hT4Nxu.js') }}"></script>
 <script>
