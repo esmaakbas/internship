@@ -32,3 +32,6 @@ Flask-Session==0.8.0
 # PDF generation
 weasyprint==62.3
 xhtml2pdf==0.2.15
+reportlab==4.0.9
+html5lib==1.1
+gunicorn==23.0.0
