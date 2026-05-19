@@ -1,0 +1,30 @@
+FROM rocker/r-ver:4.3.1
+
+# Install Linux system libraries required to build certain R packages
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends \
+		build-essential \
+		pkg-config \
+		libcurl4-openssl-dev \
+		libsodium-dev \
+		zlib1g-dev \
+		libssl-dev \
+		libxml2-dev \
+		libicu-dev \
+		libgfortran5 \
+		libopenblas-dev \
+		libomp-dev \
+		libblas-dev \
+		liblapack-dev \
+	&& rm -rf /var/lib/apt/lists/*
+
+# Install plumber and common R packages at build time so container is ready
+# Install packages and immediately verify they can be loaded; fail the build if any are missing
+RUN Rscript -e "install.packages(c('plumber','jsonlite','remotes','dplyr','xgboost'), repos='https://cran.rstudio.com/')" \
+ && Rscript -e "library(plumber); library(jsonlite); library(remotes); library(dplyr); library(xgboost); cat('R packages ok\n')"
+
+WORKDIR /pipeline
+
+# The pipeline folder is mounted at /pipeline (host must provide it)
+# Default command runs the R entrypoint script present in the mounted folder
+CMD ["Rscript", "run_api.R"]

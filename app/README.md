@@ -22,15 +22,14 @@ A Python-based application for running inference predictions using the Capsico R
 ## Prerequisites
 
 - **Python**: 3.8 or higher
-- **R**: 4.0 or higher (with Rscript available in PATH)
-- **R Packages**: Required packages for the Capsico pipeline
-- **Operating System**: Windows (configured for Windows paths)
+- **R**: 4.0 or higher (with `Rscript` available in PATH)
+- **R Packages**: Required packages for the Capsico pipeline (installed in the Plumber image or in the pipeline environment)
 
 ## Installation
 
-1. **Clone the repository**:
+1. **Clone the repository** and change into the `app` directory:
    ```bash
-   git clone <repository-url>
+   git clone https://example.com/your-repo.git
    cd internship/app
    ```
 
@@ -50,9 +49,10 @@ A Python-based application for running inference predictions using the Capsico R
    pip install python-dotenv
    ```
 
-5. **Copy env variables to .env file**:
-   ```bash
+5. **Create a local `.env` file** by copying `.env.example` and editing values as needed:
+   ```powershell
    cp .env.example .env
+   # On Windows PowerShell you can run: copy .env.example .env
    ```
 
 6. **Verify setup**:
@@ -229,15 +229,10 @@ Results are generated in CSV format and saved to the `outputs/` directory:
 
 ## Security Notes
 
-- Never commit `.env` files or sensitive credentials
-- Keep `FLASK_SECRET_KEY` secure in production
-- Validate all file uploads
-- Limit file sizes (default: 16MB)
+- Never commit `.env` files or sensitive credentials to version control.
+- Keep `FLASK_SECRET_KEY` and other secrets secure in production and use a secrets manager when possible.
+- Validate all file uploads and limit file sizes (default: 16MB).
 
 ## License
 
-[Specify your license here]
-
-## Contact
-
-[Your contact information or team information]
+This repository does not include a license file. Add one to the project root if you intend to publish or share this code under a specific license.
